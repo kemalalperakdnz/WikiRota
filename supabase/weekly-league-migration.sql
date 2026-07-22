@@ -93,7 +93,10 @@ grant execute on function public.finalize_verified_score(
   uuid, uuid, text, jsonb, integer, integer
 ) to service_role;
 
-create or replace view public.leaderboard_public
+-- CREATE OR REPLACE VIEW, ortaya kolon eklenince Postgres kolon yeniden adlandırma sanır.
+drop view if exists public.leaderboard_public;
+
+create view public.leaderboard_public
 with (security_invoker = true)
 as
 select
@@ -114,3 +117,9 @@ from public.leaderboard_entries
 where verified = true;
 
 grant select on public.leaderboard_public to anon, authenticated;
+
+-- security_invoker view, weekly_key kolonuna da SELECT gerekir
+grant select (
+  id, player_name, category_id, difficulty_id, game_mode, daily_key, weekly_key,
+  start_title, target_title, route_history, steps, time_ms, verified, created_at
+) on public.leaderboard_entries to anon, authenticated;
