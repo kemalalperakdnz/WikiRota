@@ -32,5 +32,5 @@ Function dağıtılırken JWT doğrulamasını kapatan `--no-verify-jwt` seçene
 kullanmayın. `SUPABASE_SERVICE_ROLE_KEY` yalnızca Edge Function ortamında
 Supabase tarafından sağlanır; bu anahtarı `supabase-config.js` içine koymayın.
 
-Deploy sonrası ilk açılışta tarayıcıda hard refresh yapın (Service Worker `vikirota-shell-v24`
-ve `?v=24` asset sürümleri birlikte yükseltilir).
+Deploy sonrası ilk açılışta tarayıcıda hard refresh yapın (Service Worker `vikirota-shell-v25`
+ve `?v=25` asset sürümleri birlikte yükseltilir).

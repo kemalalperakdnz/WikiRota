@@ -1871,27 +1871,9 @@
     const modeFilter = els.leaderboardModeFilter.value;
     const currentWeekKey = getIstanbulWeekKey();
     const currentDayKey = getIstanbulDateKey();
-    let sourceRecords =
+    const sourceRecords =
       recordsInput ||
       (scope === "online" ? state.onlineRecords : loadRecords());
-
-    // Çevrim içi haftalık/günlük boşsa bu cihazdaki sezon skorlarını da göster
-    if (!recordsInput && scope === "online" && (modeFilter === "weekly" || modeFilter === "daily")) {
-      const onlineMatched = state.onlineRecords.filter((record) =>
-        modeFilter === "weekly"
-          ? record.gameMode === "weekly" && record.weeklyKey === currentWeekKey
-          : record.gameMode === "daily" && record.dailyKey === currentDayKey
-      );
-      if (!onlineMatched.length) {
-        sourceRecords = loadRecords();
-        setLeaderboardStatus(
-          modeFilter === "weekly"
-            ? "Çevrim içi haftalık skor yok; bu haftanın cihaz skorları gösteriliyor."
-            : "Çevrim içi günlük skor yok; bugünün cihaz skorları gösteriliyor.",
-          "warning"
-        );
-      }
-    }
 
     const records = sourceRecords
       .filter((record) => !categoryFilter || record.categoryId === categoryFilter)
@@ -1922,6 +1904,38 @@
     );
     els.clearRecordsBtn.hidden = scope === "online";
 
+    if (scope === "online" && !recordsInput) {
+      if (modeFilter === "weekly") {
+        setLeaderboardStatus(
+          records.length
+            ? `Bu haftanın çevrim içi lig sıralaması (${currentWeekKey}).`
+            : "Bu hafta henüz çevrim içi lig skoru yok. Haftalık ligi bitirince burada görünür.",
+          records.length ? "success" : "info"
+        );
+      } else if (modeFilter === "daily") {
+        setLeaderboardStatus(
+          records.length
+            ? "Bugünün çevrim içi günlük sıralaması."
+            : "Bugün henüz çevrim içi günlük skor yok.",
+          records.length ? "success" : "info"
+        );
+      } else if (!modeFilter) {
+        setLeaderboardStatus(
+          records.length
+            ? "Çevrim içi genel sıralama gösteriliyor."
+            : "Çevrim içi skor bulunamadı.",
+          records.length ? "success" : "info"
+        );
+      } else {
+        setLeaderboardStatus(
+          records.length
+            ? "Çevrim içi serbest rota sıralaması."
+            : "Bu filtrelerde çevrim içi sonuç yok.",
+          records.length ? "success" : "info"
+        );
+      }
+    }
+
     if (!best) {
       els.bestEmpty.hidden = false;
       els.bestFilled.hidden = true;
@@ -1938,12 +1952,17 @@
     }
 
     if (!records.length) {
+      let emptyOnline = "Bu filtrelerde çevrim içi sonuç bulunamadı.";
+      if (scope === "online" && modeFilter === "weekly") {
+        emptyOnline =
+          "Bu hafta henüz çevrim içi lig skoru yok. Haftalık ligi tamamlayınca herkesin skoru burada listelenir.";
+      } else if (scope === "online" && modeFilter === "daily") {
+        emptyOnline = "Bugün henüz çevrim içi günlük skor yok.";
+      }
       els.recordsBody.innerHTML = `
         <tr class="records__empty">
           <td colspan="6">${
-            scope === "online"
-              ? "Bu filtrelerde çevrim içi sonuç bulunamadı."
-              : "Henüz kayıtlı bir bitiriş yok."
+            scope === "online" ? emptyOnline : "Henüz kayıtlı bir bitiriş yok."
           }</td>
         </tr>
       `;
@@ -2034,25 +2053,89 @@
     if (!state.supabaseReady || !state.supabaseClient) return;
     setLeaderboardStatus("Çevrim içi rekorlar yükleniyor…");
 
-    const { data, error } = await state.supabaseClient
-      .from("leaderboard_public")
-      .select("*")
-      .order("steps", { ascending: true })
-      .order("time_ms", { ascending: true })
-      .order("created_at", { ascending: true })
-      .limit(100);
+    const modeFilter = els.leaderboardModeFilter?.value || "";
+    const weekKey = getIstanbulWeekKey();
+    const dayKey = getIstanbulDateKey();
+    const client = state.supabaseClient;
 
-    if (error) {
-      setLeaderboardStatus(`Çevrim içi tablo alınamadı: ${error.message}`, "error");
-      return;
-    }
+    try {
+      let rows = [];
 
-    state.onlineRecords = (data || []).map(mapOnlineRecord);
-    setLeaderboardStatus("Çevrim içi genel sıralama gösteriliyor.", "success");
-    if (state.leaderboardScope === "online") {
-      renderRecords(null, "online");
+      if (modeFilter === "weekly") {
+        const { data, error } = await client
+          .from("leaderboard_public")
+          .select("*")
+          .eq("game_mode", "weekly")
+          .eq("weekly_key", weekKey)
+          .order("steps", { ascending: true })
+          .order("time_ms", { ascending: true })
+          .order("created_at", { ascending: true })
+          .limit(100);
+        if (error) throw error;
+        rows = data || [];
+      } else if (modeFilter === "daily") {
+        const { data, error } = await client
+          .from("leaderboard_public")
+          .select("*")
+          .eq("game_mode", "daily")
+          .eq("daily_key", dayKey)
+          .order("steps", { ascending: true })
+          .order("time_ms", { ascending: true })
+          .order("created_at", { ascending: true })
+          .limit(100);
+        if (error) throw error;
+        rows = data || [];
+      } else {
+        // Genel liste + bu haftanın ligi + bugünün günlüğü (kaçmasın)
+        const [general, weekly, daily] = await Promise.all([
+          client
+            .from("leaderboard_public")
+            .select("*")
+            .order("steps", { ascending: true })
+            .order("time_ms", { ascending: true })
+            .order("created_at", { ascending: true })
+            .limit(100),
+          client
+            .from("leaderboard_public")
+            .select("*")
+            .eq("game_mode", "weekly")
+            .eq("weekly_key", weekKey)
+            .order("steps", { ascending: true })
+            .order("time_ms", { ascending: true })
+            .limit(50),
+          client
+            .from("leaderboard_public")
+            .select("*")
+            .eq("game_mode", "daily")
+            .eq("daily_key", dayKey)
+            .order("steps", { ascending: true })
+            .order("time_ms", { ascending: true })
+            .limit(50),
+        ]);
+        if (general.error) throw general.error;
+        if (weekly.error) throw weekly.error;
+        if (daily.error) throw daily.error;
+
+        const byId = new Map();
+        for (const row of [...(general.data || []), ...(weekly.data || []), ...(daily.data || [])]) {
+          byId.set(String(row.id), row);
+        }
+        rows = [...byId.values()];
+      }
+
+      state.onlineRecords = rows.map(mapOnlineRecord);
+      if (state.leaderboardScope === "online") {
+        renderRecords(null, "online");
+      } else {
+        setLeaderboardStatus("Çevrim içi skorlar güncellendi.", "success");
+      }
+      renderWeeklyStandings();
+    } catch (error) {
+      setLeaderboardStatus(
+        `Çevrim içi tablo alınamadı: ${error.message || error}`,
+        "error"
+      );
     }
-    renderWeeklyStandings();
   }
 
   async function ensureAnonymousSession() {
@@ -3616,7 +3699,13 @@
     els.leaderboardDifficultyFilter.addEventListener("change", () =>
       renderRecords()
     );
-    els.leaderboardModeFilter.addEventListener("change", () => renderRecords());
+    els.leaderboardModeFilter.addEventListener("change", () => {
+      if (state.leaderboardScope === "online" && state.supabaseReady) {
+        fetchOnlineRecords();
+      } else {
+        renderRecords();
+      }
+    });
 
     els.clearRecordsBtn.addEventListener("click", () => {
       const ok = window.confirm("Bu cihazdaki tüm rekorlar silinsin mi?");
