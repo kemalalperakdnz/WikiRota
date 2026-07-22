@@ -15,7 +15,50 @@
   const STORAGE_PROFILES = "vikirota_profiles";
   const STORAGE_SOUND = "vikirota_sound";
   const STORAGE_THEME = "vikirota_theme";
+  const STORAGE_RECENT_TITLES = "vikirota_recent_titles";
   const MAX_RECORDS = 50;
+  const RECENT_TITLE_LIMIT = 100;
+
+  /** Start/hedef olarak sık tekrar eden mega-hub maddeler (normalizeTitle ile karşılaştırılır) */
+  const OVERUSED_HUB_LABELS = [
+    "Türkiye",
+    "İstanbul",
+    "Ankara",
+    "İzmir",
+    "Dünya",
+    "Avrupa",
+    "Asya",
+    "Afrika",
+    "Amerika",
+    "İnsan",
+    "Tarih",
+    "Bilim",
+    "Coğrafya",
+    "Savaş",
+    "Osmanlı İmparatorluğu",
+    "Mustafa Kemal Atatürk",
+    "Futbol",
+    "Spor",
+    "Müzik",
+    "Film",
+    "Sinema",
+    "Edebiyat",
+    "Şiir",
+    "Bilgisayar",
+    "İnternet",
+    "Yazılım",
+    "Video oyunu",
+    "Sağlık",
+    "Tıp",
+    "Kalp",
+    "Güneş",
+    "Ay",
+    "Su",
+    "Hayvan",
+    "Bitki",
+    "Memeliler",
+    "Kuşlar",
+  ];
 
   /** Tamamen cihazdaki profil verileriyle açılan 20 kademeli rozet galerisi */
   const ACHIEVEMENTS = [
@@ -510,6 +553,61 @@
       .replace(/\s+/g, " ")
       .trim()
       .toLocaleLowerCase("tr-TR");
+  }
+
+  const OVERUSED_HUBS = new Set(OVERUSED_HUB_LABELS.map(normalizeTitle));
+
+  function loadRecentTitles() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_RECENT_TITLES) || "[]");
+      return Array.isArray(parsed)
+        ? parsed.map((title) => normalizeTitle(title)).filter(Boolean)
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** Oynanan start/hedef maddeleri hatırlar; sonraki turlarda tekrarını azaltır */
+  function rememberPlayedTitles(startTitle, targetTitle) {
+    const next = [
+      normalizeTitle(startTitle),
+      normalizeTitle(targetTitle),
+      ...loadRecentTitles(),
+    ].filter(Boolean);
+    localStorage.setItem(
+      STORAGE_RECENT_TITLES,
+      JSON.stringify([...new Set(next)].slice(0, RECENT_TITLE_LIMIT))
+    );
+  }
+
+  function isOverusedHub(title) {
+    return OVERUSED_HUBS.has(normalizeTitle(title));
+  }
+
+  /** Yüksek skor = daha taze / daha az hub */
+  function titleNoveltyScore(title, recentSet) {
+    const key = normalizeTitle(title);
+    let score = Math.random();
+    if (recentSet.has(key)) score -= 8;
+    if (isOverusedHub(title)) score -= 3.5;
+    // Çok kısa genel isimler genelde hub
+    if (key.length <= 4) score -= 1.2;
+    return score;
+  }
+
+  function rankTitlesByNovelty(titles, recentSet = new Set(loadRecentTitles())) {
+    return [...titles].sort(
+      (a, b) => titleNoveltyScore(b, recentSet) - titleNoveltyScore(a, recentSet)
+    );
+  }
+
+  function pairNoveltyScore(startTitle, targetTitle, recentSet) {
+    return (
+      titleNoveltyScore(startTitle, recentSet) +
+      titleNoveltyScore(targetTitle, recentSet) +
+      (normalizeTitle(startTitle) === normalizeTitle(targetTitle) ? -20 : 0)
+    );
   }
 
   function formatTime(ms) {
@@ -2612,32 +2710,27 @@
    * Üst kategorilerde madde az olduğundan alt raflara iner.
    */
   async function fetchCategoryTitles(categoryTitle) {
-    if (categoryCache.has(categoryTitle)) {
-      return categoryCache.get(categoryTitle);
-    }
-
+    // Bilerek önbelleklemiyoruz: her turda farklı alt raflar açılsın
     const titles = [];
-    titles.push(...(await fetchPagesInCategory(categoryTitle)));
+    titles.push(...(await fetchPagesInCategory(categoryTitle, 80)));
 
-    const subcats = shuffle(await fetchSubcategories(categoryTitle)).slice(0, 3);
+    const subcats = shuffle(await fetchSubcategories(categoryTitle)).slice(0, 6);
     for (const sub of subcats) {
-      await wait(140);
-      const pages = await fetchPagesInCategory(sub);
+      await wait(120);
+      const pages = await fetchPagesInCategory(sub, 60);
       titles.push(...pages);
 
-      // Toplam havuz hâlâ zayıfsa yalnızca bir seviye daha in
-      if (titles.length < 20 && pages.length < 8) {
-        const deeper = shuffle(await fetchSubcategories(sub)).slice(0, 1);
+      if (titles.length < 40) {
+        const deeper = shuffle(await fetchSubcategories(sub)).slice(0, 2);
         for (const deep of deeper) {
-          await wait(140);
-          titles.push(...(await fetchPagesInCategory(deep)));
+          await wait(120);
+          titles.push(...(await fetchPagesInCategory(deep, 40)));
         }
       }
+      if (new Set(titles).size >= 160) break;
     }
 
-    const unique = [...new Set(titles)].filter(isPlayableTitle);
-    categoryCache.set(categoryTitle, unique);
-    return unique;
+    return [...new Set(titles)].filter(isPlayableTitle);
   }
 
   /** pageprops ile anlam ayrımı sayfalarını ayıklar */
@@ -2735,40 +2828,47 @@
 
   /**
    * Seçilen kategori + zorluğa göre iki farklı oynanabilir madde seçer.
+   * Son oynanan maddeler ve mega-hub’lar start/hedef olarak aşağı itilir.
    */
   async function pickStartAndTarget(categoryId, difficultyId = state.difficultyId) {
     const category = getCategoryById(categoryId);
+    const recentSet = new Set(loadRecentTitles());
     let pool = [];
 
     if (category.mode === "random") {
-      // Zorluk süzgeci için daha geniş havuz
-      const rounds = difficultyId === "easy" ? 6 : 5;
+      // Geniş rastgele örnek — Vikipedi’nin asıl zenginliğini kullan
+      const rounds = difficultyId === "easy" ? 8 : 7;
       for (let i = 0; i < rounds; i += 1) {
-        const batch = await fetchRandomTitles(15);
+        const batch = await fetchRandomTitles(20);
         pool.push(...batch);
-        await wait(150);
+        await wait(130);
       }
     } else {
       const wikiCats = shuffle(category.wikiCategories || []);
-      // Havuz yeterli olana kadar yalnızca seçilen kategorinin köklerini tara
       for (const wikiCat of wikiCats) {
         try {
           const titles = await fetchCategoryTitles(wikiCat);
           pool.push(...titles);
-          await wait(160);
-          if (new Set(pool).size >= 100) break;
+          await wait(140);
+          if (new Set(pool).size >= 180) break;
         } catch (err) {
           console.warn("Kategori okunamadı:", wikiCat, err);
         }
       }
     }
 
-    pool = shuffle([...new Set(pool)]).filter(isPlayableTitle);
+    pool = [...new Set(pool)].filter(isPlayableTitle);
     pool = await filterDisambiguations(pool);
+
+    // Önce taze maddeleri tut; yetmezse recent’leri geri ekle
+    const freshPool = pool.filter((title) => !recentSet.has(normalizeTitle(title)));
+    if (freshPool.length >= 12) {
+      pool = freshPool;
+    }
 
     if (pool.length < 2) {
       if (category.mode === "random") {
-        pool = await fetchRandomTitles(25);
+        pool = await fetchRandomTitles(30);
       } else {
         throw new Error(
           `${category.label} kategorisinde bu tur için yeterli madde bulunamadı. Yeniden dene.`
@@ -2778,10 +2878,13 @@
 
     const scored = await enrichWithLength(pool);
     let filtered = filterPoolByDifficulty(scored, difficultyId);
-    filtered = shuffle(filtered);
+    filtered = rankTitlesByNovelty(filtered, recentSet);
 
     if (filtered.length < 2) {
-      filtered = shuffle(scored.map((s) => s.title));
+      filtered = rankTitlesByNovelty(
+        scored.map((item) => item.title),
+        recentSet
+      );
     }
 
     if (filtered.length < 2) {
@@ -2791,11 +2894,16 @@
     const minLinks = difficultyId === "hard" ? 3 : difficultyId === "medium" ? 2 : 1;
     if (minLinks > 1) {
       filtered = await preferLinkedTitles(filtered, minLinks);
+      filtered = rankTitlesByNovelty(filtered, recentSet);
     }
 
-    const startTitle = filtered[0];
-    const targetTitle = filtered.find(
-      (t) => normalizeTitle(t) !== normalizeTitle(startTitle)
+    // Hub’ları start/hedef olarak mümkün olduğunca ele
+    const nonHub = filtered.filter((title) => !isOverusedHub(title));
+    const pickPool = nonHub.length >= 2 ? nonHub : filtered;
+
+    const startTitle = pickPool[0];
+    const targetTitle = pickPool.find(
+      (title) => normalizeTitle(title) !== normalizeTitle(startTitle)
     );
     if (!targetTitle) {
       throw new Error("Başlangıç ve hedef ayrılamadı.");
@@ -2804,7 +2912,7 @@
     return {
       startTitle,
       targetTitle,
-      filteredPool: filtered,
+      filteredPool: pickPool,
       validationPool: pool,
     };
   }
@@ -2812,38 +2920,64 @@
   /** Tek havuz turunda geçerli start/target + rota arar; bulunamazsa null döner */
   async function pickValidatedStartAndTargetOnce(categoryId, difficultyId) {
     const category = getCategoryById(categoryId);
+    const recentSet = new Set(loadRecentTitles());
     const selection = await pickStartAndTarget(categoryId, difficultyId);
-    const candidates = shuffle(selection.filteredPool);
-    // Start/target kategoriden gelir; ara hop’lar hub’lara açık (rota güvenilirliği)
-    const pairs = [
-      [selection.startTitle, selection.targetTitle],
-      ...candidates.slice(0, 16).map((startTitle, index) => [
-        startTitle,
-        candidates[(index + 5) % candidates.length],
-      ]),
-    ];
+    const candidates = rankTitlesByNovelty(selection.filteredPool, recentSet);
 
-    for (const [startTitle, targetTitle] of pairs.slice(0, 12)) {
-      if (!targetTitle || normalizeTitle(startTitle) === normalizeTitle(targetTitle)) {
-        continue;
-      }
+    const rawPairs = [
+      [selection.startTitle, selection.targetTitle],
+      ...candidates.slice(0, 24).map((startTitle, index) => [
+        startTitle,
+        candidates[(index + 7) % candidates.length],
+      ]),
+    ].filter(
+      ([startTitle, targetTitle]) =>
+        targetTitle &&
+        normalizeTitle(startTitle) !== normalizeTitle(targetTitle)
+    );
+
+    const pairs = [...rawPairs].sort(
+      (a, b) =>
+        pairNoveltyScore(b[0], b[1], recentSet) -
+        pairNoveltyScore(a[0], a[1], recentSet)
+    );
+
+    for (const [startTitle, targetTitle] of pairs.slice(0, 16)) {
+      // İki uç da recent ise atla (son çarelerde kalır)
+      const bothRecent =
+        recentSet.has(normalizeTitle(startTitle)) &&
+        recentSet.has(normalizeTitle(targetTitle));
+      if (bothRecent) continue;
+
+      const route = await findRouteWithinThree(startTitle, targetTitle, null);
+      if (route) return { startTitle, targetTitle, validationRoute: route };
+    }
+
+    // Son çare: recent çiftleri de dene
+    for (const [startTitle, targetTitle] of pairs.slice(0, 16)) {
       const route = await findRouteWithinThree(startTitle, targetTitle, null);
       if (route) return { startTitle, targetTitle, validationRoute: route };
     }
 
     if (category.mode === "random") {
-      const fallbackStarts = shuffle(candidates).slice(0, 16);
-      for (const startTitle of fallbackStarts) {
-        const links = shuffle(
-          (await fetchOutgoingLinks(startTitle, 160)).filter(isPlayableTitle)
-        );
-        for (const targetTitle of links.slice(0, 8)) {
+      const fallbackStarts = candidates
+        .filter((title) => !isOverusedHub(title))
+        .slice(0, 18);
+      for (const startTitle of fallbackStarts.length ? fallbackStarts : candidates.slice(0, 18)) {
+        const links = rankTitlesByNovelty(
+          (await fetchOutgoingLinks(startTitle, 180)).filter(isPlayableTitle),
+          recentSet
+        ).filter((title) => !isOverusedHub(title));
+        for (const targetTitle of links.slice(0, 10)) {
           if (normalizeTitle(startTitle) === normalizeTitle(targetTitle)) continue;
+          if (recentSet.has(normalizeTitle(targetTitle))) continue;
           const route = await findRouteWithinThree(startTitle, targetTitle, null);
           if (route) return { startTitle, targetTitle, validationRoute: route };
         }
         const direct = links.find(
-          (title) => normalizeTitle(title) !== normalizeTitle(startTitle)
+          (title) =>
+            normalizeTitle(title) !== normalizeTitle(startTitle) &&
+            !recentSet.has(normalizeTitle(title))
         );
         if (direct) {
           return {
@@ -2859,17 +2993,21 @@
     const candidateMap = new Map(
       selection.validationPool.map((title) => [normalizeTitle(title), title])
     );
-    const fallbackStarts = shuffle([
-      ...candidates,
-      ...selection.validationPool,
-    ]).slice(0, 16);
+    const fallbackStarts = rankTitlesByNovelty(
+      [...selection.filteredPool, ...selection.validationPool],
+      recentSet
+    )
+      .filter((title) => !isOverusedHub(title))
+      .slice(0, 18);
 
     for (const startTitle of fallbackStarts) {
-      const links = await fetchOutgoingLinks(startTitle, 160);
-      const reachable = shuffle(links).find(
+      const links = await fetchOutgoingLinks(startTitle, 180);
+      const reachable = rankTitlesByNovelty(links, recentSet).find(
         (title) =>
           normalizeTitle(title) !== normalizeTitle(startTitle) &&
-          candidateMap.has(normalizeTitle(title))
+          candidateMap.has(normalizeTitle(title)) &&
+          !isOverusedHub(title) &&
+          !recentSet.has(normalizeTitle(title))
       );
       if (reachable) {
         const targetTitle = candidateMap.get(normalizeTitle(reachable));
@@ -2881,8 +3019,8 @@
       }
     }
 
-    for (const startTitle of candidates.slice(0, 10)) {
-      for (const targetTitle of shuffle(candidates).slice(0, 6)) {
+    for (const startTitle of candidates.slice(0, 12)) {
+      for (const targetTitle of rankTitlesByNovelty(candidates, recentSet).slice(0, 8)) {
         if (normalizeTitle(startTitle) === normalizeTitle(targetTitle)) continue;
         const route = await findRouteWithinThree(startTitle, targetTitle, null);
         if (route) return { startTitle, targetTitle, validationRoute: route };
@@ -2898,7 +3036,10 @@
     for (let poolAttempt = 0; poolAttempt < 3; poolAttempt += 1) {
       try {
         const found = await pickValidatedStartAndTargetOnce(categoryId, difficultyId);
-        if (found) return found;
+        if (found) {
+          rememberPlayedTitles(found.startTitle, found.targetTitle);
+          return found;
+        }
       } catch (error) {
         lastError = error;
       }
