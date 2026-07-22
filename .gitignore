@@ -1,0 +1,24 @@
+# Bağımlılıklar / araçlar
+node_modules/
+.qa-tmp/
+npm-debug.log*
+yarn-error.log*
+
+# Ortam ve gizli dosyalar
+.env
+.env.*
+!.env.example
+
+# Supabase yerel
+supabase/.temp/
+supabase/.branches/
+
+# OS / editör
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+.idea/
+.vscode/
+*.log

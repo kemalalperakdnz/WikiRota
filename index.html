@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="VikiRota — Vikipedi linkleri arasında en kısa yolu bulma oyunu." />
+  <title>VikiRota — Bilgi Patikasında Yarış</title>
+  <link rel="icon" href="images/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#ffffff" id="theme-color-meta" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=24" />
+  <script>
+    try {
+      if (localStorage.getItem("vikirota_theme") === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    } catch (error) {
+      /* ignore */
+    }
+  </script>
+</head>
+<body>
+  <div class="ambient" aria-hidden="true">
+    <div class="ambient__orb ambient__orb--blue"></div>
+    <div class="ambient__orb ambient__orb--coral"></div>
+    <div class="ambient__mesh"></div>
+  </div>
+
+  <!-- ========== LOBİ ========== -->
+  <section class="lobby" id="lobby" aria-label="VikiRota lobi">
+    <nav class="wiki-topbar" aria-label="Ana gezinme">
+      <span class="wiki-topbar__menu" aria-hidden="true">☰</span>
+      <a class="wiki-topbar__brand" href="#" aria-label="VikiRota ana sayfa">
+        <span class="wiki-topbar__brand-main">VikiRota</span>
+        <span class="wiki-topbar__brand-sub">Özgür bilgi yarışı</span>
+      </a>
+      <div class="wiki-topbar__search" aria-hidden="true">
+        <span>⌕</span>
+        <span>Vikipedi evreninde rota ara</span>
+      </div>
+      <div class="wiki-topbar__controls">
+        <button type="button" class="sound-toggle" id="sound-toggle" aria-pressed="true" aria-label="Sesi kapat" title="Sesi kapat">
+          🔊
+        </button>
+        <button type="button" class="sound-toggle" id="install-app-btn" aria-label="Uygulamayı yükle" title="Uygulamayı yükle" hidden>
+          📲
+        </button>
+        <button type="button" class="sound-toggle" id="theme-toggle" aria-pressed="false" aria-label="Karanlık temaya geç" title="Karanlık temaya geç">
+          🌙
+        </button>
+        <img
+          class="wiki-topbar__logo"
+          src="images/logo.png"
+          alt="VikiRota logosu"
+        />
+      </div>
+    </nav>
+
+    <main class="wiki-page">
+      <header class="wiki-welcome">
+        <div class="wiki-watermark" aria-hidden="true">
+          <span>V</span><span>İ</span><span>K</span><span>İ</span>
+          <span>R</span><span>O</span><span>T</span><span>A</span>
+        </div>
+        <div class="wiki-welcome__intro">
+          <h1>VikiRota'ya hoş geldiniz!</h1>
+          <p>Türkçe Vikipedi bağlantılarıyla oynanan özgür bilgi yarışı</p>
+        </div>
+        <div class="wiki-welcome__side">
+          <p><strong>Bir madde seç,</strong> bağlantıları izle ve hedefe ulaş.</p>
+          <div class="wiki-welcome__links">
+            <button type="button" class="wiki-text-link" id="how-to-link">Nasıl oynanır?</button>
+            <button type="button" class="wiki-text-link" id="feedback-link">İstekler &amp; düzenlemeler</button>
+            <button type="button" class="wiki-text-link" id="privacy-link">Gizlilik / KVKK</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="wiki-section wiki-section--blue">
+        <h2 class="wiki-section__heading">Oyuncu kaydı</h2>
+        <div class="wiki-section__body wiki-section__body--split">
+          <form class="player-dock" id="register-form" autocomplete="on">
+            <div class="player-dock__copy">
+              <p class="player-dock__label" id="register-hint">Gezgin adını yaz, arenaya gir</p>
+              <div class="player-dock__row">
+                <label class="sr-only" for="player-name">Oyuncu adı</label>
+                <input
+                  class="player-dock__input"
+                  id="player-name"
+                  name="playerName"
+                  type="text"
+                  maxlength="24"
+                  minlength="2"
+                  placeholder="Oyuncu adın…"
+                  required
+                  autocomplete="nickname"
+                />
+                <button type="submit" class="btn btn--primary btn--dock" id="register-btn">Kaydol</button>
+                <button type="button" class="btn btn--ghost btn--dock" id="change-player-btn" hidden>Değiştir</button>
+              </div>
+            </div>
+          </form>
+
+          <aside class="trophy" id="best-panel">
+            <div class="trophy__empty" id="best-empty">
+              <span class="trophy__icon" aria-hidden="true">★</span>
+              <p>Henüz rekor yok. İlk rekoru sen kır.</p>
+            </div>
+            <div class="trophy__filled" id="best-filled" hidden>
+              <span class="trophy__icon" aria-hidden="true">★</span>
+              <div>
+                <p class="trophy__caption">Genel en iyi rekor</p>
+                <p class="trophy__player" id="best-player">—</p>
+                <p class="trophy__stats">
+                  <span id="best-steps">—</span> adım · <span id="best-time">—</span>
+                </p>
+                <p class="trophy__route" id="best-route">—</p>
+                <p class="trophy__meta" id="best-meta" hidden>—</p>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="wiki-section wiki-section--daily">
+        <h2 class="wiki-section__heading">Günün yarışı</h2>
+        <div class="daily-challenge">
+          <div>
+            <p class="daily-challenge__date" id="daily-date">Bugünün rotası</p>
+            <h3 id="daily-title">Günlük görev hazırlanıyor…</h3>
+            <p class="daily-challenge__meta" id="daily-meta">—</p>
+            <p class="daily-challenge__status" id="daily-status"></p>
+          </div>
+          <button type="button" class="btn btn--daily" id="daily-start-btn" disabled>
+            Günlük yarışa katıl
+          </button>
+        </div>
+      </section>
+
+      <section class="wiki-section wiki-section--weekly">
+        <h2 class="wiki-section__heading">Haftalık lig</h2>
+        <div class="daily-challenge weekly-challenge">
+          <div>
+            <p class="daily-challenge__date" id="weekly-date">Bu haftanın rotası</p>
+            <h3 id="weekly-title">Haftalık lig hazırlanıyor…</h3>
+            <p class="daily-challenge__meta" id="weekly-meta">—</p>
+            <p class="daily-challenge__status" id="weekly-status"></p>
+          </div>
+          <button type="button" class="btn btn--weekly" id="weekly-start-btn" disabled>
+            Haftalık lige katıl
+          </button>
+        </div>
+        <div class="weekly-standings">
+          <h3 class="weekly-standings__title">Bu haftanın sıralaması</h3>
+          <ol class="weekly-standings__list" id="weekly-standings-list">
+            <li class="weekly-standings__empty">Henüz haftalık skor yok.</li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="wiki-section wiki-section--duel" id="duel-section">
+        <h2 class="wiki-section__heading">Arkadaş düellosu</h2>
+        <div class="daily-challenge duel-challenge">
+          <div>
+            <p class="daily-challenge__date">Canlı oda · aynı rota</p>
+            <h3 id="duel-title">Oda oluştur, linki paylaş, ikiniz de hazır olunca başlayın</h3>
+            <p class="daily-challenge__meta" id="duel-meta">
+              Ev sahibi kategori ve zorluğu seçer; ikiniz de aynı ayarla yarışır.
+            </p>
+            <p class="daily-challenge__status" id="duel-status"></p>
+          </div>
+          <div class="duel-actions">
+            <button type="button" class="btn btn--duel" id="duel-create-btn" disabled>
+              Oda oluştur
+            </button>
+            <button type="button" class="btn btn--duel" id="duel-apply-settings-btn" hidden>
+              Rotayı güncelle
+            </button>
+            <button type="button" class="btn btn--ghost" id="duel-share-btn" hidden>
+              Linki kopyala
+            </button>
+            <button type="button" class="btn btn--duel-ready" id="duel-ready-btn" hidden disabled>
+              Hazırım
+            </button>
+            <button type="button" class="btn btn--ghost" id="duel-cancel-btn" hidden>
+              Odadan çık
+            </button>
+          </div>
+        </div>
+        <div class="duel-settings" id="duel-settings">
+          <label class="duel-settings__field">
+            <span>Kategori</span>
+            <select id="duel-category-select" aria-label="Düello kategorisi"></select>
+          </label>
+          <label class="duel-settings__field">
+            <span>Zorluk</span>
+            <select id="duel-difficulty-select" aria-label="Düello zorluğu"></select>
+          </label>
+          <p class="duel-settings__hint" id="duel-settings-hint">
+            Bu ayarları yalnızca odayı kuran kişi değiştirir.
+          </p>
+        </div>
+        <div class="duel-players" id="duel-players" hidden>
+          <div class="duel-player" id="duel-host-card">
+            <span class="duel-player__role">Ev sahibi</span>
+            <strong class="duel-player__name" id="duel-host-name">—</strong>
+            <span class="duel-player__state" id="duel-host-state">Bekleniyor</span>
+          </div>
+          <div class="duel-player" id="duel-guest-card">
+            <span class="duel-player__role">Rakip</span>
+            <strong class="duel-player__name" id="duel-guest-name">Bekleniyor…</strong>
+            <span class="duel-player__state" id="duel-guest-state">—</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="wiki-section shared-challenge" id="shared-challenge" hidden>
+        <h2 class="wiki-section__heading">Arkadaşından meydan okuma</h2>
+        <div class="daily-challenge">
+          <div>
+            <p class="daily-challenge__date">Paylaşılan sabit rota</p>
+            <h3 id="shared-challenge-title">—</h3>
+            <p class="daily-challenge__meta" id="shared-challenge-meta">—</p>
+          </div>
+          <button type="button" class="btn btn--daily" id="shared-start-btn" disabled>
+            Meydan okumayı başlat
+          </button>
+        </div>
+      </section>
+
+      <section class="wiki-section wiki-section--profile">
+        <h2 class="wiki-section__heading">Gezgin profili</h2>
+        <div class="profile-overview">
+          <dl class="profile-stats">
+            <div><dt>Toplam oyun</dt><dd id="profile-games">0</dd></div>
+            <div><dt>Galibiyet</dt><dd id="profile-wins">0</dd></div>
+            <div><dt>Ort. süre</dt><dd id="profile-average-time">—</dd></div>
+            <div><dt>Favori kategori</dt><dd id="profile-favorite-category">—</dd></div>
+          </dl>
+          <div>
+            <h3 class="profile-achievements__title">🏆 Başarım Rozetleri Galerisi</h3>
+            <ul class="profile-achievements" id="profile-achievements"></ul>
+          </div>
+        </div>
+      </section>
+
+      <div class="wiki-columns">
+        <section class="wiki-section wiki-section--cyan">
+          <h2 class="wiki-section__heading">Zorluk derecesi</h2>
+          <div class="wiki-section__body">
+            <p class="wiki-section__lead" id="difficulty-hint">Kolay: bilinen, zengin maddeler</p>
+            <div class="difficulty" id="difficulty-grid" role="radiogroup" aria-label="Zorluk derecesi"></div>
+          </div>
+        </section>
+
+        <section class="wiki-section wiki-section--green">
+          <h2 class="wiki-section__heading">Konu kategorisi</h2>
+          <div class="wiki-section__body">
+            <p class="wiki-section__lead">Başlangıç ve hedef seçtiğin bilgi alanından gelir.</p>
+            <div class="arena-cats" id="category-grid" role="radiogroup" aria-label="Oyun kategorileri"></div>
+          </div>
+        </section>
+      </div>
+
+      <div class="launch">
+        <button type="button" class="btn btn--launch" id="start-btn" disabled>
+          <span class="btn--launch__glow" aria-hidden="true"></span>
+          <span class="btn--launch__text">Yolculuğa çık</span>
+          <span class="btn--launch__arrow" aria-hidden="true">→</span>
+        </button>
+        <p class="launch__status" id="pair-status" hidden></p>
+        <button type="button" class="btn btn--ghost launch__retry" id="pair-retry-btn" hidden>
+          Yeniden dene
+        </button>
+      </div>
+
+      <section class="wiki-section wiki-section--lavender scoreboard">
+        <div class="scoreboard__head wiki-section__heading">
+          <h2>Rekor tablosu</h2>
+          <button type="button" class="btn btn--tiny" id="clear-records-btn" title="Yerel rekorları sil">Temizle</button>
+        </div>
+        <div class="wiki-section__body">
+          <div class="leaderboard-toolbar">
+            <div class="leaderboard-tabs" role="tablist" aria-label="Rekor kapsamı">
+              <button type="button" class="leaderboard-tab" id="leaderboard-online-tab" role="tab">
+                Çevrim içi
+              </button>
+              <button type="button" class="leaderboard-tab is-active" id="leaderboard-local-tab" role="tab">
+                Bu cihaz
+              </button>
+            </div>
+            <div class="leaderboard-filters">
+              <label>
+                <span class="sr-only">Kategori filtresi</span>
+                <select id="leaderboard-category-filter">
+                  <option value="">Tüm kategoriler</option>
+                </select>
+              </label>
+              <label>
+                <span class="sr-only">Zorluk filtresi</span>
+                <select id="leaderboard-difficulty-filter">
+                  <option value="">Tüm zorluklar</option>
+                  <option value="easy">Kolay</option>
+                  <option value="medium">Orta</option>
+                  <option value="hard">Zor</option>
+                </select>
+              </label>
+              <label>
+                <span class="sr-only">Mod filtresi</span>
+                <select id="leaderboard-mode-filter">
+                  <option value="">Tüm modlar</option>
+                  <option value="normal">Serbest rota</option>
+                  <option value="daily">Günlük yarış</option>
+                  <option value="weekly">Haftalık lig</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <p class="leaderboard-status" id="leaderboard-status">
+            Bu cihazdaki kayıtlar gösteriliyor.
+          </p>
+          <div class="records-wrap">
+            <table class="records" id="records-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Gezgin</th>
+                  <th>Kategori</th>
+                  <th>Zorluk</th>
+                  <th>Adım</th>
+                  <th>Süre</th>
+                </tr>
+              </thead>
+              <tbody id="records-body">
+                <tr class="records__empty">
+                  <td colspan="6">Henüz kayıtlı bir bitiriş yok.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <!-- ========== NASIL OYNANIR ========== -->
+  <section class="how-to-page" id="how-to-page" aria-labelledby="how-to-title" hidden>
+    <nav class="wiki-topbar" aria-label="Nasıl oynanır gezinmesi">
+      <button type="button" class="how-to-back" id="how-to-back-btn" aria-label="Ana lobiye dön">←</button>
+      <a class="wiki-topbar__brand" href="#" aria-label="VikiRota">
+        <span class="wiki-topbar__brand-main">VikiRota</span>
+        <span class="wiki-topbar__brand-sub">Özgür bilgi yarışı</span>
+      </a>
+      <div class="wiki-topbar__search" aria-hidden="true">
+        <span>⌕</span>
+        <span>Yardım sayfalarında ara</span>
+      </div>
+      <span class="wiki-topbar__user" aria-hidden="true">?</span>
+    </nav>
+
+    <main class="how-to-content">
+      <header class="how-to-hero">
+        <div class="wiki-watermark" aria-hidden="true">
+          <span>N</span><span>A</span><span>S</span><span>I</span><span>L</span>
+          <span>?</span>
+        </div>
+        <p class="how-to-hero__eyebrow">VikiRota yardım merkezi</p>
+        <h1 id="how-to-title">Nasıl oynanır?</h1>
+        <p>
+          VikiRota; Türkçe Vikipedi maddeleri arasında yalnızca makale içi
+          bağlantıları izleyerek hedefe ulaştığın bir bilgi yarışıdır.
+          Bu sayfada tüm oyun modları, ipucu, skor ve ayarlar ayrıntılı anlatılır.
+        </p>
+      </header>
+
+      <aside class="how-to-notice">
+        <strong>Kısa kural:</strong>
+        Arama yapmak, adres çubuğunu kullanmak, yeni sekme açmak veya dış siteye
+        geçmek yok. Yolunu yalnızca makale içindeki mavi Vikipedi bağlantılarıyla bulmalısın.
+      </aside>
+
+      <div class="how-to-layout">
+        <article class="how-to-article">
+          <section class="help-section help-section--blue">
+            <h2>1. Oyuna hazırlan</h2>
+            <div class="help-section__body">
+              <ol class="help-steps">
+                <li>
+                  <span class="help-steps__number">1</span>
+                  <div>
+                    <h3>Oyuncu adını kaydet</h3>
+                    <p>
+                      Lobide gezgin adını yazıp kaydet. Rekorlar, profil ve başarımlar
+                      bu isimle bu cihazda saklanır. İstersen “Değiştir” ile adı güncelleyebilirsin.
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <span class="help-steps__number">2</span>
+                  <div>
+                    <h3>Zorluk ve kategori seç</h3>
+                    <p>
+                      Serbest rota ve arkadaş düellosu için zorluk (Kolay / Orta / Zor)
+                      ile kategori seç. Günlük ve haftalık yarışlarda rota sabittir;
+                      senin seçimin o modları değiştirmez.
+                    </p>
+                  </div>
+                </li>
+                <li>
+                  <span class="help-steps__number">3</span>
+                  <div>
+                    <h3>Modunu seç ve başla</h3>
+                    <p>
+                      “Yolculuğa çık”, “Günün yarışı”, “Haftalık lig”, paylaşılan meydan
+                      okuma veya “Arkadaş düellosu” ile turu başlat. Geri sayım bitince süre işler.
+                    </p>
+                  </div>
+                </li>
+              </ol>
+            </div>
+          </section>
+
+          <section class="help-section help-section--cyan">
+            <h2>2. Oyun modları</h2>
+            <div class="help-section__body">
+              <p>VikiRota’ta beş farklı oynanış yolu vardır:</p>
+              <ul>
+                <li>
+                  <strong>Serbest rota (Yolculuğa çık):</strong>
+                  Seçtiğin kategori ve zorluğa göre rastgele ama doğrulanmış bir
+                  başlangıç → hedef çifti üretilir. Her tur farklı olabilir.
+                </li>
+                <li>
+                  <strong>Günün yarışı:</strong>
+                  İstanbul takvimine göre herkesin aynı sabit rotası vardır.
+                  Günü tamamlayınca lobide en iyi sonucun görünür; ertesi gün yeni rota gelir.
+                </li>
+                <li>
+                  <strong>Haftalık lig:</strong>
+                  Haftanın ortak rotasında yarışırsın. Skorlar haftalık sıralamada
+                  toplanır; sezon Pazartesi yenilenir.
+                </li>
+                <li>
+                  <strong>Arkadaşından meydan okuma:</strong>
+                  Birisi “Rotayı paylaş” ile link gönderdiyse lobide özel bir kart açılır.
+                  Aynı sabit başlangıç ve hedefi sen de bağımsız oynarsın
+                  (senkron oda değildir).
+                </li>
+                <li>
+                  <strong>Arkadaş düellosu:</strong>
+                  Canlı oda kurarsın. Ev sahibi kategori ve zorluğu seçer, ortak rota üretilir,
+                  link paylaşılır. Rakip katılır; ikiniz de “Hazırım” deyince aynı anda yarış başlar.
+                  Bitince adım ve süre karşılaştırılır. Oda kurulurken veya hazırlıkta
+                  ev sahibi ayarı değiştirip rotayı güncelleyebilir.
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="help-section help-section--green">
+            <h2>3. Yarış sırasında ne yaparsın?</h2>
+            <div class="help-section__body">
+              <p>
+                Ekranda açık olan maddeyi oku. Hedefe yaklaştıracağını düşündüğün
+                <span class="help-link-example">mavi bağlantıya</span> tıkla.
+                Her geçerli tıklama <strong>1 adım</strong> sayılır; yeni madde sayfa yenilenmeden açılır.
+              </p>
+              <ul>
+                <li><strong>Süre:</strong> Geri sayım bitince kronometre başlar.</li>
+                <li><strong>Adım:</strong> Kaç kez madde değiştirdiğin.</li>
+                <li><strong>Varış noktası:</strong> Ulaşman gereken hedef madde.</li>
+                <li><strong>Şu an / Başlangıç:</strong> Bulunduğun madde ve tur başlangıcı.</li>
+                <li><strong>İzlenen rota:</strong> Bu turda geçtiğin maddelerin listesi.</li>
+                <li><strong>Rotayı paylaş:</strong> Aynı rotayı asenkron meydan okuma linkiyle gönderir.</li>
+                <li><strong>Yarışmayı bitir:</strong> Turu kaydetmeden lobiye döner (onay ister).</li>
+                <li>Hedefe ulaşınca süre durur ve zafer ekranı açılır.</li>
+              </ul>
+              <p>
+                Referanslar, görseller, dış siteler, kırmızı (oluşmamış) bağlantılar ve
+                Vikipedi özel sayfaları (Dosya:, Kategori: vb.) oyunda kullanılamaz.
+              </p>
+            </div>
+          </section>
+
+          <section class="help-section help-section--lavender">
+            <h2>4. İpucu sistemi</h2>
+            <div class="help-section__body">
+              <p>
+                Takılırsan <strong>İpucu al</strong> düğmesini kullanabilirsin.
+                Sistem, bulunduğun maddeden hedefe giden yolda
+                <strong>yalnızca bir sonraki adımı</strong> gösterir: ilgili bağlantı
+                makalede vurgulanır ve kısa bir mesajla bildirilir.
+              </p>
+              <ul>
+                <li>İpucu cezası yalnızca <strong>+1 adım</strong>dır (süreye eklenmez).</li>
+                <li>İpucu, o andaki maddede gerçekten görünen bir bağlantıyı önerir.</li>
+                <li>Üç adım içinde güvenli yol bulunamazsa ipucu verilemez.</li>
+                <li>İstersen ipucu almadan da tamamen kendi rotanla bitirebilirsin.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="help-section help-section--blue">
+            <h2>5. Zorluk dereceleri</h2>
+            <div class="help-section__body difficulty-guide">
+              <div>
+                <strong>Kolay</strong>
+                <p>Uzun, tanınmış ve çok sayıda bağlantı içeren maddeler gelir.</p>
+              </div>
+              <div>
+                <strong>Orta</strong>
+                <p>Tanıdık konularla daha az bilinen maddeler dengeli biçimde karışır.</p>
+              </div>
+              <div>
+                <strong>Zor</strong>
+                <p>Kısa, az bilinen ve bağlantı seçenekleri sınırlı maddeler seçilir.</p>
+              </div>
+            </div>
+            <div class="help-section__body">
+              <p>
+                Kategori “Hepsi” veya belirli bir alan (Ünlü İsimler, Yerler, Tarih,
+                Bilim, Spor vb.) olabilir. Serbest rota ve düello bu seçime göre madde çifti üretir.
+              </p>
+            </div>
+          </section>
+
+          <section class="help-section help-section--cyan">
+            <h2>6. Skor, rekor ve liderlik</h2>
+            <div class="help-section__body">
+              <p>
+                Sıralama kuralı her modda aynıdır: önce
+                <strong>en az adım</strong>, adımlar eşitse
+                <strong>en kısa süre</strong> daha iyidir.
+              </p>
+              <ul>
+                <li><strong>Bu cihaz:</strong> Yerel rekor tablosu tarayıcında saklanır.</li>
+                <li>
+                  <strong>Çevrim içi:</strong> Bağlantı varsa skorlar sunucuda doğrulanıp
+                  genel sıralamaya yazılabilir (günlük / haftalık / serbest).
+                </li>
+                <li>Düello sonuçları canlı odada karşılaştırılır; genel liderliğe yazılmaz.</li>
+                <li>Filtrelerle kategori, zorluk ve moda göre tabloyu daraltabilirsin.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="help-section help-section--green">
+            <h2>7. Profil, başarımlar ve ayarlar</h2>
+            <div class="help-section__body">
+              <ul>
+                <li>
+                  <strong>Gezgin profili:</strong> Toplam oyun, galibiyet, ortalama süre
+                  ve favori kategori özetini gösterir.
+                </li>
+                <li>
+                  <strong>Başarım rozetleri:</strong> Belirli hedefleri tamamladıkça
+                  level rozetleri açılır; zafer ekranında yeni rozet kutlanır.
+                </li>
+                <li>
+                  <strong>Ses:</strong> Lobide 🔊 / 🔇 ile açılıp kapanır; ayar cihazda saklanır.
+                </li>
+                <li>
+                  <strong>Tema:</strong> 🌙 / ☀️ ile karanlık ve aydınlık tema arasında geçiş yapılır.
+                </li>
+                <li>
+                  <strong>Uygulama:</strong> Destekleyen tarayıcılarda 📲 ile PWA olarak yüklenebilir.
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="help-section help-section--lavender">
+            <h2>8. Adil oyun kuralları</h2>
+            <div class="help-section__body">
+              <ul>
+                <li>Yalnızca makale içi geçerli Vikipedi bağlantılarını kullan.</li>
+                <li>Tarayıcı geri tuşu, adres çubuğu araması veya yeni sekme ile kısayol yok.</li>
+                <li>Dış siteler, görseller ve referans dipnotları oyun yolu sayılmaz.</li>
+                <li>Düelloda ev sahibi ayarı belirler; ikiniz de aynı rotada yarışırsınız.</li>
+                <li>Çevrim içi skorlarda süre ve rota sunucu tarafında doğrulanabilir.</li>
+              </ul>
+            </div>
+          </section>
+        </article>
+
+        <aside class="how-to-sidebar">
+          <div class="help-box">
+            <h2>Hızlı ipuçları</h2>
+            <ul>
+              <li>Önce geniş konulu maddelere ulaş.</li>
+              <li>Kişiler için meslek, ülke ve dönem bağlantılarını dene.</li>
+              <li>Yerler için ülke, şehir ve coğrafya maddelerini kullan.</li>
+              <li>Hedefin üst kavramını (bilim dalı, ülke, tür) düşün.</li>
+              <li>Takılırsan tek adımlık ipucunu bilinçli kullan.</li>
+              <li>Düelloda hazır olmadan “Hazırım”a basma.</li>
+            </ul>
+          </div>
+          <div class="help-box help-box--warning">
+            <h2>Unutma</h2>
+            <p>
+              Geri düğmesi, arama motoru veya yeni sekme kullanmak oyunun
+              temel kuralına aykırıdır. En kısa ve en temiz yol, makale içi
+              bağlantılardan geçer.
+            </p>
+          </div>
+          <button type="button" class="btn btn--primary how-to-cta" id="how-to-lobby-btn">
+            Ana lobiye dön
+          </button>
+        </aside>
+      </div>
+    </main>
+  </section>
+
+  <!-- ========== İSTEKLER VE DÜZENLEMELER ========== -->
+  <section class="feedback-page" id="feedback-page" aria-labelledby="feedback-title" hidden>
+    <nav class="wiki-topbar" aria-label="İstekler ve düzenlemeler gezinmesi">
+      <button type="button" class="how-to-back" id="feedback-back-btn" aria-label="Ana lobiye dön">←</button>
+      <a class="wiki-topbar__brand" href="#" aria-label="VikiRota">
+        <span class="wiki-topbar__brand-main">VikiRota</span>
+        <span class="wiki-topbar__brand-sub">Özgür bilgi yarışı</span>
+      </a>
+      <div class="wiki-topbar__search" aria-hidden="true">
+        <span>⌕</span>
+        <span>Görüş ve öneriler</span>
+      </div>
+      <span class="wiki-topbar__user" aria-hidden="true">✉</span>
+    </nav>
+
+    <main class="feedback-content">
+      <header class="feedback-hero">
+        <div class="wiki-watermark" aria-hidden="true">
+          <span>İ</span><span>S</span><span>T</span><span>E</span><span>K</span>
+        </div>
+        <p class="how-to-hero__eyebrow">VikiRota iletişim merkezi</p>
+        <h1 id="feedback-title">İstekler &amp; düzenlemeler</h1>
+        <p>
+          Yeni özellik fikirlerini, kategori önerilerini, metin düzeltmelerini
+          ve karşılaştığın sorunları bize iletebilirsin.
+        </p>
+      </header>
+
+      <div class="feedback-layout">
+        <section class="feedback-form-panel">
+          <h2>Yeni ileti oluştur</h2>
+          <form class="feedback-form" id="feedback-form">
+            <div class="feedback-form__grid">
+              <label class="feedback-field">
+                <span>Adın</span>
+                <input id="feedback-name" name="name" type="text" maxlength="60" required />
+              </label>
+              <label class="feedback-field">
+                <span>E-posta adresin</span>
+                <input id="feedback-email" name="email" type="email" maxlength="120" required />
+              </label>
+            </div>
+
+            <label class="feedback-field">
+              <span>İleti türü</span>
+              <select id="feedback-type" name="type" required>
+                <option value="Yeni özellik isteği">Yeni özellik isteği</option>
+                <option value="Düzenleme önerisi">Düzenleme önerisi</option>
+                <option value="Hata bildirimi">Hata bildirimi</option>
+                <option value="Kategori önerisi">Kategori önerisi</option>
+                <option value="Diğer">Diğer</option>
+              </select>
+            </label>
+
+            <label class="feedback-field">
+              <span>Konu</span>
+              <input
+                id="feedback-subject"
+                name="subject"
+                type="text"
+                maxlength="120"
+                placeholder="Kısa ve açıklayıcı bir başlık"
+                required
+              />
+            </label>
+
+            <label class="feedback-field">
+              <span>Açıklama</span>
+              <textarea
+                id="feedback-message"
+                name="message"
+                rows="8"
+                maxlength="3000"
+                placeholder="İsteğini veya düzenleme önerini ayrıntılı biçimde anlat…"
+                required
+              ></textarea>
+            </label>
+
+            <p class="feedback-form__note">
+              Gönder düğmesi, verdiğin bilgilerle e-posta uygulamanda hazır bir
+              ileti oluşturur. Son gönderimi e-posta uygulamandan onaylamalısın.
+            </p>
+
+            <div class="feedback-form__actions">
+              <button type="submit" class="btn btn--primary">E-posta taslağını aç</button>
+              <button type="button" class="btn btn--ghost" id="feedback-lobby-btn">Ana lobiye dön</button>
+            </div>
+          </form>
+        </section>
+
+        <aside class="feedback-sidebar">
+          <div class="help-box">
+            <h2>Doğrudan iletişim</h2>
+            <p>
+              <a class="feedback-email-link" href="mailto:alperkemalakdeniz@gmail.com">
+                alperkemalakdeniz@gmail.com
+              </a>
+            </p>
+          </div>
+          <div class="help-box help-box--warning">
+            <h2>İyi bir bildirim</h2>
+            <ul>
+              <li>Tek bir konuya odaklanır.</li>
+              <li>Beklenen sonucu açıkça anlatır.</li>
+              <li>Hata varsa nasıl oluştuğunu sıralar.</li>
+              <li>Kategori önerisinde örnek maddeler verir.</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </section>
+
+  <!-- ========== GİZLİLİK / KVKK ========== -->
+  <section class="privacy-page" id="privacy-page" aria-labelledby="privacy-title" hidden>
+    <nav class="wiki-topbar" aria-label="Gizlilik ve KVKK gezinmesi">
+      <button type="button" class="how-to-back" id="privacy-back-btn" aria-label="Ana lobiye dön">←</button>
+      <a class="wiki-topbar__brand" href="#" aria-label="VikiRota">
+        <span class="wiki-topbar__brand-main">VikiRota</span>
+        <span class="wiki-topbar__brand-sub">Özgür bilgi yarışı</span>
+      </a>
+      <div class="wiki-topbar__search" aria-hidden="true">
+        <span>⌕</span>
+        <span>Gizlilik ve KVKK</span>
+      </div>
+      <span class="wiki-topbar__user" aria-hidden="true">⚖</span>
+    </nav>
+
+    <main class="how-to-content privacy-content">
+      <header class="how-to-hero privacy-hero">
+        <div class="wiki-watermark" aria-hidden="true">
+          <span>K</span><span>V</span><span>K</span><span>K</span>
+        </div>
+        <p class="how-to-hero__eyebrow">VikiRota gizlilik merkezi</p>
+        <h1 id="privacy-title">Gizlilik / KVKK</h1>
+        <p>
+          Bu sayfa, VikiRota’nın hangi verileri işlediğini, bunları nerede
+          tuttuğunu ve haklarını kısaca açıklar.
+        </p>
+      </header>
+
+      <aside class="how-to-notice">
+        <strong>Özet:</strong>
+        Oyuncu adın ve rekorların cihazda saklanır. Çevrim içi liderlik için
+        anonim oturum ve doğrulanmış skorlar Supabase üzerinde tutulabilir.
+        Kişisel hesap, şifre veya zorunlu e-posta istenmez.
+      </aside>
+
+      <div class="how-to-layout">
+        <article class="how-to-article">
+          <section class="help-section help-section--blue">
+            <h2>1. Veri sorumlusu</h2>
+            <div class="help-section__body">
+              <p>
+                VikiRota bağımsız bir web oyunudur. Gizlilik ve KVKK ile ilgili
+                taleplerini
+                <a href="mailto:alperkemalakdeniz@gmail.com">alperkemalakdeniz@gmail.com</a>
+                adresine iletebilirsin.
+              </p>
+            </div>
+          </section>
+
+          <section class="help-section help-section--cyan">
+            <h2>2. İşlenen veriler</h2>
+            <div class="help-section__body">
+              <ul>
+                <li>
+                  <strong>Oyuncu adı:</strong> Lobide girdiğin gezgin adı.
+                </li>
+                <li>
+                  <strong>Oyun verileri:</strong> Adım, süre, kategori, zorluk,
+                  rota geçmişi, günlük/haftalık tamamlamalar, başarımlar.
+                </li>
+                <li>
+                  <strong>Teknik oturum:</strong> Çevrim içi liderlik için
+                  Supabase anonim kullanıcı kimliği.
+                </li>
+                <li>
+                  <strong>İletişim (isteğe bağlı):</strong> İstekler sayfasından
+                  e-posta taslağı oluşturursan adın ve e-posta adresin yalnızca
+                  kendi posta uygulamanda kullanılır.
+                </li>
+              </ul>
+              <p>
+                Kimlik belgesi, konum takibi, reklam kimliği veya ödeme bilgisi
+                toplanmaz.
+              </p>
+            </div>
+          </section>
+
+          <section class="help-section">
+            <h2>3. Saklama yeri ve süre</h2>
+            <div class="help-section__body">
+              <ul>
+                <li>
+                  Yerel rekorlar, profil ve ayarlar tarayıcının
+                  <strong>localStorage</strong> alanında tutulur.
+                </li>
+                <li>
+                  Doğrulanmış çevrim içi skorlar Supabase veritabanında saklanır.
+                </li>
+                <li>
+                  PWA kurulumu varsa uygulama kabuğu cihazında önbelleğe
+                  alınabilir.
+                </li>
+              </ul>
+              <p>
+                Cihaz kayıtlarını lobideki temizleme seçenekleriyle silebilirsin.
+                Çevrim içi kayıtların silinmesi için e-posta ile talep
+                iletebilirsin.
+              </p>
+            </div>
+          </section>
+
+          <section class="help-section help-section--blue">
+            <h2>4. Amaç ve hukuki sebep</h2>
+            <div class="help-section__body">
+              <p>Veriler şu amaçlarla işlenir:</p>
+              <ul>
+                <li>Oyunu çalıştırmak ve rekor tablosunu göstermek</li>
+                <li>Günlük / haftalık lig sıralamasını sağlamak</li>
+                <li>Sahte skor gönderimini engellemek</li>
+                <li>İsteğin üzerine geri bildirim almak</li>
+              </ul>
+              <p>
+                Temel dayanak: açık rızan ve hizmetin sunulması için gerekli
+                işlemedir (6698 sayılı KVKK md. 5).
+              </p>
+            </div>
+          </section>
+
+          <section class="help-section help-section--cyan">
+            <h2>5. Üçüncü taraflar</h2>
+            <div class="help-section__body">
+              <ul>
+                <li>
+                  <strong>tr.wikipedia.org:</strong> Makale içeriği ve
+                  bağlantılar için MediaWiki API.
+                </li>
+                <li>
+                  <strong>Supabase:</strong> Anonim oturum, skor doğrulama ve
+                  liderlik tablosu.
+                </li>
+              </ul>
+              <p>
+                Bu servisler kendi altyapı politikalarına tabidir. VikiRota,
+                verilerini reklam ağına satmaz.
+              </p>
+            </div>
+          </section>
+
+          <section class="help-section">
+            <h2>6. Hakların</h2>
+            <div class="help-section__body">
+              <p>KVKK kapsamında:</p>
+              <ul>
+                <li>İşlenip işlenmediğini öğrenme</li>
+                <li>Bilgilendirme isteme</li>
+                <li>Düzeltme veya silme talep etme</li>
+                <li>İşlemeye itiraz etme</li>
+              </ul>
+              <p>
+                Taleplerini
+                <a href="mailto:alperkemalakdeniz@gmail.com">alperkemalakdeniz@gmail.com</a>
+                adresine “KVKK talebi” konusuyla gönderebilirsin.
+              </p>
+            </div>
+          </section>
+        </article>
+
+        <aside class="how-to-sidebar">
+          <div class="help-box">
+            <h2>Hızlı notlar</h2>
+            <ul>
+              <li>Zorunlu üyelik yoktur.</li>
+              <li>Çocuklara özel profil oluşturulmaz.</li>
+              <li>Çerez paneli zorunlu değildir; temel depolama localStorage ile yapılır.</li>
+            </ul>
+          </div>
+          <div class="help-box help-box--warning">
+            <h2>Güncelleme</h2>
+            <p>
+              Bu metin son güncelleme: 22 Temmuz 2026. Önemli değişikliklerde
+              lobi üzerinden duyurulur.
+            </p>
+          </div>
+          <button type="button" class="btn btn--primary how-to-cta" id="privacy-lobby-btn">
+            Ana lobiye dön
+          </button>
+        </aside>
+      </div>
+    </main>
+  </section>
+
+  <!-- ========== OYUN ========== -->
+  <div class="game-shell" id="game-shell" hidden>
+    <header class="game-panel" id="game-panel" role="banner">
+      <div class="game-panel__brand">
+        <button type="button" class="btn btn--icon" id="back-lobby-btn" title="Lobiye dön" aria-label="Lobiye dön">←</button>
+        <img class="game-panel__logo" src="images/logo.png" alt="VikiRota logosu" />
+        <div class="game-panel__titles">
+          <h1 class="game-panel__name">VikiRota</h1>
+          <p class="game-panel__tagline">
+            <span id="player-chip">Gezgin</span>
+            ·
+            <span id="category-chip">Hepsi</span>
+            ·
+            <span id="difficulty-chip">Kolay</span>
+            <span class="game-mode-badge" id="game-mode-badge" hidden>Günlük yarış</span>
+          </p>
+        </div>
+        <button type="button" class="btn btn--share btn--emoji game-panel__sound" id="game-sound-toggle" aria-pressed="true" aria-label="Sesi kapat" title="Sesi kapat">
+          🔊
+        </button>
+      </div>
+
+      <div class="game-panel__actions">
+        <button type="button" class="btn btn--share" id="share-challenge-btn">
+          <span class="btn-label-full">Rotayı paylaş</span>
+          <span class="btn-label-short">Paylaş</span>
+        </button>
+          <button type="button" class="btn btn--hint" id="hint-btn" title="+1 adım">
+            <span class="btn-label-full">İpucu al</span>
+            <span class="btn-label-short">İpucu</span>
+          </button>
+        <button type="button" class="btn btn--finish" id="finish-race-btn">
+          <span class="btn-label-full">Yarışmayı bitir</span>
+          <span class="btn-label-short">Bitir</span>
+        </button>
+      </div>
+
+      <div class="game-panel__stats" role="status" aria-live="polite">
+        <div class="stat">
+          <span class="stat__label">Süre</span>
+          <span class="stat__value" id="timer">00:00.0</span>
+        </div>
+        <div class="stat">
+          <span class="stat__label">Adım</span>
+          <span class="stat__value" id="step-count">0</span>
+        </div>
+        <div class="stat stat--target">
+          <span class="stat__label">Varış Noktası</span>
+          <span class="stat__value" id="target-title">—</span>
+        </div>
+      </div>
+
+      <div class="game-panel__trail">
+        <span class="trail__label">Şu an:</span>
+        <span class="trail__current" id="current-title">—</span>
+        <span class="trail__sep" aria-hidden="true">·</span>
+        <span class="trail__label">Başlangıç:</span>
+        <span class="trail__start" id="start-title">—</span>
+      </div>
+      <div class="route-history" aria-label="İzlenen rota">
+        <span class="route-history__label">İzlenen rota</span>
+        <ol class="route-history__list" id="route-history-list"></ol>
+      </div>
+      <p class="hint-message" id="hint-message" role="status" hidden></p>
+    </header>
+
+    <main class="stage" id="main-stage">
+      <div class="loader" id="loader" hidden>
+        <div class="loader__ring" aria-hidden="true"></div>
+        <p class="loader__text" id="loader-text">Ansiklopedi sayfası açılıyor…</p>
+      </div>
+
+      <article class="article" id="article-view">
+        <header class="article__header">
+          <h2 class="article__title" id="article-title"></h2>
+        </header>
+        <div class="article__body" id="article-body"></div>
+      </article>
+    </main>
+  </div>
+
+  <!-- ========== GERİ SAYIM ========== -->
+  <div class="countdown" id="countdown" hidden aria-live="assertive">
+    <div class="countdown__glow" aria-hidden="true"></div>
+    <div class="countdown__inner">
+      <p class="countdown__eyebrow" id="countdown-eyebrow">Rotan hazır</p>
+      <p class="countdown__mission">Şu kelimeden şu kelimeye</p>
+
+      <div class="countdown__route">
+        <div class="countdown__word countdown__word--from">
+          <span class="countdown__tag">Başlangıç</span>
+          <span class="countdown__title" id="countdown-from">—</span>
+        </div>
+        <div class="countdown__arrow" aria-hidden="true">
+          <span class="countdown__arrow-line"></span>
+          <span class="countdown__arrow-head">→</span>
+        </div>
+        <div class="countdown__word countdown__word--to">
+          <span class="countdown__tag">Hedef</span>
+          <span class="countdown__title" id="countdown-to">—</span>
+        </div>
+      </div>
+
+      <div class="countdown__dial" id="countdown-dial">
+        <span class="countdown__number" id="countdown-number">3</span>
+      </div>
+      <p class="countdown__hint" id="countdown-hint">Hazırlan…</p>
+    </div>
+  </div>
+
+  <!-- Zafer modalı -->
+  <div class="modal" id="win-modal" role="dialog" aria-modal="true" aria-labelledby="win-heading" hidden>
+    <div class="modal__backdrop" id="modal-backdrop"></div>
+    <div class="modal__card">
+      <div class="modal__burst" aria-hidden="true"></div>
+      <p class="modal__eyebrow" id="win-eyebrow">Rotanın sonu</p>
+      <h2 class="modal__heading" id="win-heading">Tebrikler!</h2>
+      <p class="modal__lead" id="win-message"></p>
+      <p class="modal__badge" id="win-badge" hidden>Yeni genel rekor!</p>
+      <p class="modal__badge modal__badge--daily" id="daily-complete-badge" hidden>
+        Günlük yarış tamamlandı
+      </p>
+      <p class="modal__badge modal__badge--weekly" id="weekly-complete-badge" hidden>
+        Haftalık lig tamamlandı
+      </p>
+      <p class="modal__badge modal__badge--duel" id="duel-complete-badge" hidden>
+        Düello tamamlandı
+      </p>
+      <dl class="modal__metrics">
+        <div class="metric">
+          <dt>Toplam süre</dt>
+          <dd id="final-time">—</dd>
+        </div>
+        <div class="metric">
+          <dt>Atılan adım</dt>
+          <dd id="final-steps">—</dd>
+        </div>
+      </dl>
+      <div class="duel-result" id="duel-result" hidden>
+        <h3>Düello karşılaştırması</h3>
+        <p class="duel-result__status" id="duel-result-status">Rakip bitirince sonuç burada görünür.</p>
+        <div class="duel-result__grid" id="duel-result-grid"></div>
+      </div>
+      <div class="modal-route">
+        <h3>İzlediğin rota</h3>
+        <ol id="final-route-list"></ol>
+      </div>
+      <div class="new-achievements" id="new-achievements" hidden></div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--primary" id="replay-btn">Aynı ayarla yeniden</button>
+        <button type="button" class="btn btn--ghost" id="lobby-from-win-btn">Lobiye dön</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js?v=24"></script>
+  <script src="daily-challenges.js?v=24"></script>
+  <script src="weekly-challenges.js?v=24"></script>
+  <script src="app.js?v=24"></script>
+</body>
+</html>

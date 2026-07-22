@@ -1,0 +1,4182 @@
+/* =========================================================
+   VikiRota — Canlı beyaz / Vikipedi esintili estetik
+   ========================================================= */
+
+:root {
+  --paper: #f4f7fb;
+  --paper-deep: #e8eef6;
+  --surface: #ffffff;
+  --ink: #142033;
+  --ink-soft: #3d4f66;
+  --muted: #5c6f86;
+  --faint: #8a9bb0;
+  --line: #d5deea;
+  --line-strong: #b8c6d9;
+
+  /* Vikipedi mavisi + canlı vurgular */
+  --wiki: #1a5fb4;
+  --wiki-deep: #0f3d7a;
+  --wiki-soft: rgba(26, 95, 180, 0.1);
+  --link: #1a5fb4;
+  --link-hover: #0b3d8c;
+  --coral: #e85d4c;
+  --coral-soft: rgba(232, 93, 76, 0.12);
+  --mint: #0f9d8a;
+  --mint-soft: rgba(15, 157, 138, 0.12);
+  --gold: #d97706;
+  --gold-soft: rgba(217, 119, 6, 0.12);
+  --danger: #dc2626;
+
+  --shadow: 0 18px 50px rgba(20, 48, 90, 0.1);
+  --shadow-sm: 0 8px 24px rgba(20, 48, 90, 0.08);
+  --radius: 18px;
+  --radius-sm: 12px;
+
+  --font-display: "Fraunces", Georgia, serif;
+  --font-ui: "Outfit", system-ui, sans-serif;
+  --font-article: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-family: var(--font-ui);
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.55;
+  overflow-x: hidden;
+}
+
+/* ---------- Atmosfer (açık, canlı) ---------- */
+
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1000px 600px at 8% -5%, rgba(26, 95, 180, 0.14), transparent 55%),
+    radial-gradient(800px 500px at 92% 5%, rgba(232, 93, 76, 0.1), transparent 50%),
+    radial-gradient(700px 400px at 50% 100%, rgba(15, 157, 138, 0.08), transparent 55%),
+    linear-gradient(180deg, #f8fbff 0%, #eef3f9 55%, #f4f7fb 100%);
+}
+
+.ambient__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.7;
+  animation: drift 16s var(--ease) infinite alternate;
+}
+
+.ambient__orb--blue {
+  width: min(48vw, 460px);
+  height: min(48vw, 460px);
+  top: -10%;
+  left: -8%;
+  background: radial-gradient(circle, rgba(26, 95, 180, 0.28), transparent 70%);
+}
+
+.ambient__orb--coral {
+  width: min(40vw, 380px);
+  height: min(40vw, 380px);
+  right: -6%;
+  top: 12%;
+  background: radial-gradient(circle, rgba(232, 93, 76, 0.22), transparent 70%);
+  animation-delay: -5s;
+}
+
+.ambient__mesh {
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image:
+    linear-gradient(rgba(26, 95, 180, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 95, 180, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
+}
+
+@keyframes drift {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(3%, 5%) scale(1.06); }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-logo {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(26, 95, 180, 0.25); }
+  50% { box-shadow: 0 0 0 10px rgba(26, 95, 180, 0); }
+}
+
+/* ---------- Lobi — canlı arena ---------- */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.lobby {
+  position: relative;
+  width: min(980px, calc(100% - 1.5rem));
+  margin: 0 auto;
+  padding: 1.5rem 0 3.5rem;
+  overflow: hidden;
+}
+
+.lobby[hidden],
+.game-shell[hidden],
+.countdown[hidden] {
+  display: none !important;
+}
+
+.float-words {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.float-words span {
+  position: absolute;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(0.75rem, 2.2vw, 1rem);
+  color: rgba(26, 95, 180, 0.14);
+  white-space: nowrap;
+  animation: float-drift linear infinite;
+  user-select: none;
+}
+
+@keyframes float-drift {
+  0% { transform: translateY(0) rotate(var(--rot, -4deg)); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateY(-110vh) rotate(var(--rot, -4deg)); opacity: 0; }
+}
+
+.lobby__arena {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.lobby-hero {
+  text-align: center;
+  padding: 1.25rem 0.5rem 0.35rem;
+  animation: rise-in 0.6s var(--ease) both;
+}
+
+.lobby-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--line);
+  color: var(--wiki);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  box-shadow: var(--shadow-sm);
+  animation: badge-bob 2.8s ease-in-out infinite;
+}
+
+.lobby-hero__pulse {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--coral);
+  box-shadow: 0 0 0 0 rgba(232, 93, 76, 0.5);
+  animation: live-dot 1.6s ease-out infinite;
+}
+
+@keyframes live-dot {
+  0% { box-shadow: 0 0 0 0 rgba(232, 93, 76, 0.45); }
+  70% { box-shadow: 0 0 0 10px rgba(232, 93, 76, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(232, 93, 76, 0); }
+}
+
+@keyframes badge-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.lobby-hero__brand {
+  margin: 0 0 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.7rem, 9vw, 4.2rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  background: linear-gradient(115deg, var(--wiki-deep) 0%, var(--wiki) 42%, #3b8ef0 70%, var(--coral) 115%);
+  background-size: 160% 160%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: brand-shift 6s ease-in-out infinite alternate;
+}
+
+@keyframes brand-shift {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+
+.lobby-hero__mark {
+  display: inline-grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 14px;
+  background: #fff;
+  border: 1.5px solid rgba(26, 95, 180, 0.25);
+  color: var(--wiki);
+  font-size: 1.2rem;
+  -webkit-text-fill-color: var(--wiki);
+  animation: pulse-logo 2.6s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+.lobby-hero__pitch {
+  margin: 0 auto;
+  max-width: 28rem;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  animation: rise-in 0.7s var(--ease) 0.08s both;
+}
+
+/* Oyuncu şeridi */
+.player-dock {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem 1.1rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  animation: rise-in 0.65s var(--ease) 0.12s both;
+}
+
+.player-dock__label {
+  margin: 0 0 0.55rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.player-dock__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.player-dock__input {
+  flex: 1 1 140px;
+  min-width: 0;
+  padding: 0.8rem 1rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: #fafcfe;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.player-dock__input:focus {
+  border-color: var(--wiki);
+  box-shadow: 0 0 0 4px var(--wiki-soft);
+}
+
+.player-dock__input:disabled {
+  background: var(--paper-deep);
+  opacity: 0.85;
+}
+
+.btn--dock {
+  width: auto !important;
+  margin-top: 0 !important;
+  padding: 0.8rem 1.15rem;
+  flex: 0 0 auto;
+}
+
+.trophy {
+  padding: 0.85rem 1rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fff8e8, #fff);
+  border: 1px solid rgba(217, 119, 6, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 4.5rem;
+}
+
+.trophy__icon {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #fbbf24, #f59e0b);
+  color: #fff;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  animation: trophy-glow 2.4s ease-in-out infinite;
+}
+
+@keyframes trophy-glow {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.35); }
+  50% { transform: scale(1.06); box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+}
+
+.trophy__empty {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.trophy__empty p,
+.trophy__filled {
+  margin: 0;
+}
+
+.trophy__filled {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.trophy__caption {
+  margin: 0;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.trophy__player {
+  margin: 0.1rem 0;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.trophy__stats {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--wiki);
+}
+
+.trophy__route {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.trophy__meta {
+  margin: 0;
+}
+
+/* Oyun blokları */
+.play-block {
+  padding: 1.1rem 1.1rem 1.2rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  animation: rise-in 0.65s var(--ease) both;
+}
+
+.play-block:nth-of-type(1) { animation-delay: 0.16s; }
+.play-block:nth-of-type(2) { animation-delay: 0.22s; }
+
+.play-block__head {
+  margin-bottom: 0.85rem;
+}
+
+.play-block__title {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.play-block__hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+/* Zorluk */
+.difficulty {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+}
+
+.difficulty-card {
+  appearance: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 1rem 1.05rem;
+  border-radius: 16px;
+  border: 2px solid var(--line);
+  background: #fafcfe;
+  font-family: var(--font-ui);
+  color: var(--ink);
+  transition:
+    transform 0.22s var(--ease),
+    border-color 0.22s var(--ease),
+    box-shadow 0.22s var(--ease),
+    background 0.22s var(--ease);
+  position: relative;
+  overflow: hidden;
+}
+
+.difficulty-card::after {
+  content: "";
+  position: absolute;
+  inset: auto -20% -40%;
+  height: 70%;
+  background: radial-gradient(circle, rgba(26, 95, 180, 0.12), transparent 65%);
+  opacity: 0;
+  transition: opacity 0.25s var(--ease);
+}
+
+.difficulty-card:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: var(--shadow-sm);
+}
+
+.difficulty-card:hover::after,
+.difficulty-card.is-selected::after {
+  opacity: 1;
+}
+
+.difficulty-card.is-selected {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(26, 95, 180, 0.12);
+}
+
+.difficulty-card--easy.is-selected {
+  border-color: var(--mint);
+  background: linear-gradient(145deg, #e8fff9, #fff);
+}
+
+.difficulty-card--medium.is-selected {
+  border-color: var(--wiki);
+  background: linear-gradient(145deg, #eef5ff, #fff);
+}
+
+.difficulty-card--hard.is-selected {
+  border-color: var(--coral);
+  background: linear-gradient(145deg, #fff1ee, #fff);
+}
+
+.difficulty-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+  position: relative;
+  z-index: 1;
+}
+
+.difficulty-card__name {
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+.difficulty-card--easy .difficulty-card__name { color: var(--mint); }
+.difficulty-card--medium .difficulty-card__name { color: var(--wiki); }
+.difficulty-card--hard .difficulty-card__name { color: var(--coral); }
+
+.difficulty-card__bars {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+  height: 14px;
+}
+
+.difficulty-card__bars i {
+  display: block;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--line-strong);
+}
+
+.difficulty-card--easy .difficulty-card__bars i:nth-child(1) { height: 6px; background: var(--mint); }
+.difficulty-card--easy .difficulty-card__bars i:nth-child(2) { height: 10px; }
+.difficulty-card--easy .difficulty-card__bars i:nth-child(3) { height: 14px; }
+
+.difficulty-card--medium .difficulty-card__bars i:nth-child(1),
+.difficulty-card--medium .difficulty-card__bars i:nth-child(2) {
+  background: var(--wiki);
+}
+.difficulty-card--medium .difficulty-card__bars i:nth-child(1) { height: 6px; }
+.difficulty-card--medium .difficulty-card__bars i:nth-child(2) { height: 10px; }
+.difficulty-card--medium .difficulty-card__bars i:nth-child(3) { height: 14px; }
+
+.difficulty-card--hard .difficulty-card__bars i {
+  background: var(--coral);
+}
+.difficulty-card--hard .difficulty-card__bars i:nth-child(1) { height: 6px; }
+.difficulty-card--hard .difficulty-card__bars i:nth-child(2) { height: 10px; }
+.difficulty-card--hard .difficulty-card__bars i:nth-child(3) { height: 14px; }
+
+.difficulty-card__desc {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.4;
+  position: relative;
+  z-index: 1;
+}
+
+/* Kategori chipleri */
+.arena-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.cat-chip {
+  appearance: none;
+  cursor: pointer;
+  border: 1.5px solid var(--line);
+  background: #fafcfe;
+  color: var(--ink-soft);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.65rem 0.95rem;
+  border-radius: 999px;
+  transition:
+    transform 0.2s var(--ease),
+    background 0.2s var(--ease),
+    border-color 0.2s var(--ease),
+    color 0.2s var(--ease),
+    box-shadow 0.2s var(--ease);
+}
+
+.cat-chip:hover {
+  transform: translateY(-2px) scale(1.03);
+  border-color: #9bb8df;
+  color: var(--wiki);
+}
+
+.cat-chip.is-selected {
+  background: linear-gradient(120deg, var(--wiki), #3b8ef0);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(26, 95, 180, 0.28);
+  animation: chip-pop 0.35s var(--ease);
+}
+
+@keyframes chip-pop {
+  0% { transform: scale(0.92); }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+/* Launch CTA */
+.launch {
+  text-align: center;
+  padding: 0.25rem 0 0.5rem;
+  animation: rise-in 0.65s var(--ease) 0.28s both;
+}
+
+.btn--launch {
+  position: relative;
+  width: min(100%, 420px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 1.15rem 1.6rem;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: #fff;
+  background: linear-gradient(120deg, var(--wiki-deep), var(--wiki) 45%, #3b8ef0 80%, var(--coral));
+  background-size: 200% 200%;
+  box-shadow: 0 16px 40px rgba(26, 95, 180, 0.35);
+  overflow: hidden;
+  animation: launch-shine 3.5s ease-in-out infinite;
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), opacity 0.2s;
+}
+
+@keyframes launch-shine {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.btn--launch__glow {
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  transform: translateX(-60%) rotate(12deg);
+  animation: sweep 2.8s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  0%, 30% { transform: translateX(-70%) rotate(12deg); }
+  70%, 100% { transform: translateX(70%) rotate(12deg); }
+}
+
+.btn--launch__text,
+.btn--launch__arrow {
+  position: relative;
+  z-index: 1;
+}
+
+.btn--launch__arrow {
+  transition: transform 0.2s var(--ease);
+}
+
+.btn--launch:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 20px 48px rgba(26, 95, 180, 0.42);
+}
+
+.btn--launch:hover:not(:disabled) .btn--launch__arrow {
+  transform: translateX(4px);
+}
+
+.btn--launch:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  animation: none;
+  box-shadow: none;
+}
+
+.launch__status {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--wiki);
+}
+
+.launch__retry {
+  margin-top: 0.65rem;
+}
+
+/* Skor tablosu */
+.scoreboard {
+  padding: 1.1rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  animation: rise-in 0.65s var(--ease) 0.32s both;
+}
+
+.scoreboard__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.scoreboard__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.records-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+
+.records {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.records th,
+.records td {
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.records th {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  background: var(--paper);
+  font-weight: 700;
+}
+
+.records tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.records tbody tr:nth-child(even) {
+  background: #fafcfe;
+}
+
+.records__empty td {
+  text-align: center;
+  color: var(--muted);
+  padding: 1.2rem 0.75rem;
+}
+
+.records tr.is-top td:first-child {
+  color: var(--gold);
+  font-weight: 800;
+}
+
+@media (min-width: 720px) {
+  .player-dock {
+    grid-template-columns: 1.4fr 1fr;
+    align-items: stretch;
+  }
+
+  .difficulty {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .lobby {
+    padding-top: 2rem;
+  }
+}
+
+/* ---------- Butonlar ---------- */
+
+
+.btn {
+  position: relative;
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 0.95rem;
+  border-radius: 999px;
+  padding: 0.85rem 1.4rem;
+  transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease);
+}
+
+.btn--primary {
+  color: #fff;
+  background: linear-gradient(120deg, var(--wiki) 0%, #2a7de1 55%, #3b8ef0 100%);
+  box-shadow: 0 12px 28px rgba(26, 95, 180, 0.28);
+}
+
+.panel--register .btn--primary,
+.panel--categories .btn--primary,
+.modal__actions .btn--primary {
+  width: 100%;
+}
+
+.btn--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(26, 95, 180, 0.35);
+}
+
+.btn--primary:active {
+  transform: translateY(0);
+}
+
+.btn--primary:focus-visible {
+  outline: 2px solid var(--coral);
+  outline-offset: 3px;
+}
+
+.btn--ghost {
+  width: 100%;
+  margin-top: 0.65rem;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1.5px solid var(--line);
+}
+
+.btn--ghost:hover {
+  border-color: var(--wiki);
+  color: var(--wiki);
+  background: var(--wiki-soft);
+}
+
+.btn--wide {
+  width: 100%;
+}
+
+.btn--wide:disabled,
+.btn--primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn--tiny {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.btn--tiny:hover {
+  color: var(--danger);
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+.btn--icon {
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  border-radius: 10px;
+  flex-shrink: 0;
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  font-size: 1rem;
+}
+
+.btn--icon:hover {
+  border-color: var(--wiki);
+  color: var(--wiki);
+  background: var(--wiki-soft);
+}
+
+.btn--finish {
+  margin-left: auto;
+  padding: 0.58rem 0.9rem;
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  background: #fff5f4;
+  color: var(--danger);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  box-shadow: 0 5px 14px rgba(220, 38, 38, 0.08);
+}
+
+.btn--finish:hover {
+  transform: translateY(-1px);
+  border-color: rgba(220, 38, 38, 0.48);
+  background: #fee9e7;
+  box-shadow: 0 8px 18px rgba(220, 38, 38, 0.14);
+}
+
+/* ---------- Sticky oyun paneli ---------- */
+
+.game-panel {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem 1.25rem;
+  padding: 0.9rem 1.15rem 1rem;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 8px 28px rgba(20, 48, 90, 0.07);
+}
+
+.game-panel__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.game-panel__titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.game-panel__sound {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.btn-label-short {
+  display: none;
+}
+
+.btn-label-full {
+  display: inline;
+}
+
+.game-panel__logo {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 12px;
+  background: var(--wiki-soft);
+  border: 1px solid rgba(26, 95, 180, 0.25);
+  color: var(--wiki);
+  font-size: 1.1rem;
+  animation: pulse-logo 3.2s ease-in-out infinite;
+}
+
+.game-panel__name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--wiki-deep);
+}
+
+.game-panel__tagline {
+  margin: 0.1rem 0 0;
+  font-size: 0.78rem;
+  color: var(--faint);
+  letter-spacing: 0.02em;
+}
+
+.game-panel__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+
+.stat--target {
+  border-color: rgba(232, 93, 76, 0.35);
+  background: linear-gradient(160deg, var(--coral-soft), #fff);
+}
+
+.stat__label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  font-weight: 600;
+}
+
+.stat__value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat--target .stat__value {
+  color: var(--coral);
+  font-size: 0.92rem;
+}
+
+.game-panel__trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.65rem;
+  padding-top: 0.15rem;
+  border-top: 1px solid var(--line);
+}
+
+.trail__label {
+  font-size: 0.75rem;
+  color: var(--faint);
+}
+
+.trail__current {
+  font-weight: 700;
+  color: var(--wiki);
+  font-size: 0.95rem;
+}
+
+.trail__start {
+  font-weight: 500;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.trail__sep {
+  color: var(--faint);
+}
+
+/* ---------- Makale ---------- */
+
+.stage {
+  width: min(860px, calc(100% - 2rem));
+  margin: 1.5rem auto 4rem;
+  position: relative;
+}
+
+.article {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: rise-in 0.55s var(--ease) both;
+}
+
+.article__header {
+  padding: 1.5rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background:
+    linear-gradient(120deg, rgba(26, 95, 180, 0.06), transparent 55%),
+    #fff;
+}
+
+.article__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.55rem, 4vw, 2.15rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.article__body {
+  padding: 1.25rem 1.5rem 2rem;
+  font-family: var(--font-article);
+  font-size: 1.06rem;
+  color: #243447;
+}
+
+.article__body h1,
+.article__body h2,
+.article__body h3,
+.article__body h4 {
+  font-family: var(--font-display);
+  color: var(--ink);
+  line-height: 1.25;
+  margin: 1.6rem 0 0.7rem;
+}
+
+.article__body p {
+  margin: 0 0 0.95rem;
+}
+
+.article__body ul,
+.article__body ol {
+  margin: 0 0 1rem;
+  padding-left: 1.35rem;
+}
+
+.article__body li {
+  margin-bottom: 0.35rem;
+}
+
+.article__body table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.92rem;
+  display: block;
+  overflow-x: auto;
+}
+
+.article__body th,
+.article__body td {
+  border: 1px solid var(--line);
+  padding: 0.45rem 0.6rem;
+  vertical-align: top;
+}
+
+.article__body th {
+  background: var(--paper);
+}
+
+.article__body .infobox,
+.article__body .thumb,
+.article__body .gallery,
+.article__body .navbox,
+.article__body .vertical-navbox,
+.article__body .metadata,
+.article__body .noprint,
+.article__body .mw-editsection,
+.article__body .reference,
+.article__body .reflist,
+.article__body .references,
+.article__body .hatnote,
+.article__body .dablink,
+.article__body .sistersitebox,
+.article__body .portal,
+.article__body .ambox,
+.article__body .tmbox,
+.article__body .ombox {
+  display: none !important;
+}
+
+.article__body a.wiki-link {
+  color: var(--link);
+  text-decoration: none;
+  border-bottom: 1.5px solid rgba(26, 95, 180, 0.35);
+  border-radius: 3px;
+  padding: 0 0.1em;
+  transition:
+    color 0.22s var(--ease),
+    border-color 0.22s var(--ease),
+    background-color 0.22s var(--ease);
+}
+
+.article__body a.wiki-link:hover,
+.article__body a.wiki-link:focus-visible {
+  color: var(--link-hover);
+  border-bottom-color: var(--coral);
+  background: rgba(26, 95, 180, 0.08);
+  outline: none;
+}
+
+.article__body a.wiki-link:active {
+  color: var(--coral);
+}
+
+/* ---------- Spinner ---------- */
+
+.loader {
+  display: grid;
+  place-items: center;
+  gap: 1.1rem;
+  min-height: 42vh;
+  padding: 2rem;
+}
+
+.loader[hidden] {
+  display: none !important;
+}
+
+.loader__ring {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid rgba(26, 95, 180, 0.15);
+  border-top-color: var(--wiki);
+  border-right-color: var(--coral);
+  animation: spin 0.85s linear infinite;
+}
+
+.loader__text {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  animation: breathe 1.8s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.article.is-loading {
+  display: none;
+}
+
+/* ---------- GERİ SAYIM — efsane sahne ---------- */
+
+.countdown {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background:
+    radial-gradient(800px 500px at 50% 30%, rgba(26, 95, 180, 0.18), transparent 60%),
+    radial-gradient(600px 400px at 80% 80%, rgba(232, 93, 76, 0.12), transparent 55%),
+    rgba(244, 247, 251, 0.94);
+  backdrop-filter: blur(12px);
+  animation: countdown-veil 0.45s var(--ease) both;
+}
+
+.countdown__glow {
+  position: absolute;
+  width: min(70vw, 520px);
+  height: min(70vw, 520px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(26, 95, 180, 0.2), transparent 65%);
+  animation: countdown-pulse 1s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.countdown__inner {
+  position: relative;
+  width: min(640px, 100%);
+  text-align: center;
+  animation: rise-in 0.5s var(--ease) both;
+}
+
+.countdown__eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--wiki);
+}
+
+.countdown__mission {
+  margin: 0 0 1.5rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 4.5vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.countdown__route {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 1.75rem;
+}
+
+.countdown__word {
+  padding: 1rem 1.15rem;
+  border-radius: 16px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  animation: word-pop 0.55s var(--ease) both;
+}
+
+.countdown__word--from {
+  animation-delay: 0.1s;
+  border-color: rgba(26, 95, 180, 0.3);
+  background: linear-gradient(145deg, #f0f6ff, #fff);
+}
+
+.countdown__word--to {
+  animation-delay: 0.35s;
+  border-color: rgba(232, 93, 76, 0.35);
+  background: linear-gradient(145deg, #fff5f3, #fff);
+}
+
+.countdown__tag {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.countdown__word--from .countdown__tag {
+  color: var(--wiki);
+}
+
+.countdown__word--to .countdown__tag {
+  color: var(--coral);
+}
+
+.countdown__title {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 4vw, 1.65rem);
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.countdown__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  color: var(--wiki);
+  animation: arrow-slide 0.8s var(--ease) 0.25s both;
+}
+
+.countdown__arrow-line {
+  display: block;
+  width: 48px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--wiki), var(--coral));
+}
+
+.countdown__arrow-head {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+  background: linear-gradient(90deg, var(--wiki), var(--coral));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.countdown__dial {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 140px;
+  height: 140px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 3px solid transparent;
+  background-image:
+    linear-gradient(#fff, #fff),
+    linear-gradient(135deg, var(--wiki), var(--coral));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow: 0 16px 40px rgba(26, 95, 180, 0.18);
+}
+
+.countdown__number {
+  font-family: var(--font-display);
+  font-size: 4.2rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--wiki-deep);
+  animation: digit-slam 0.55s var(--ease);
+}
+
+.countdown__number.is-go {
+  font-size: 2.4rem;
+  letter-spacing: 0.04em;
+  color: var(--coral);
+}
+
+.countdown__hint {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--muted);
+  min-height: 1.4em;
+}
+
+@keyframes countdown-veil {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes countdown-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+@keyframes word-pop {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes arrow-slide {
+  from {
+    opacity: 0;
+    transform: scaleX(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes digit-slam {
+  0% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.countdown.is-exit {
+  animation: countdown-exit 0.4s var(--ease) forwards;
+}
+
+@keyframes countdown-exit {
+  to {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+}
+
+@media (min-width: 640px) {
+  .countdown__route {
+    grid-template-columns: 1fr auto 1fr;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .countdown__arrow {
+    flex-direction: column;
+    min-width: 3rem;
+  }
+
+  .countdown__arrow-line {
+    width: 3px;
+    height: 36px;
+    background: linear-gradient(180deg, var(--wiki), var(--coral));
+  }
+}
+
+/* ---------- Zafer modalı ---------- */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+}
+
+.modal[hidden] {
+  display: none !important;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 40, 70, 0.35);
+  backdrop-filter: blur(8px);
+  animation: fade-in 0.3s ease both;
+}
+
+.modal__card {
+  position: relative;
+  width: min(440px, 100%);
+  padding: 2rem 1.6rem 1.6rem;
+  border-radius: calc(var(--radius) + 6px);
+  background:
+    radial-gradient(600px 200px at 50% -20%, rgba(26, 95, 180, 0.12), transparent 60%),
+    #fff;
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+  animation: modal-pop 0.45s var(--ease) both;
+  overflow: hidden;
+}
+
+.modal__burst {
+  position: absolute;
+  inset: -40% -20% auto;
+  height: 70%;
+  background: radial-gradient(circle, rgba(232, 93, 76, 0.12), transparent 65%);
+  pointer-events: none;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal__eyebrow {
+  position: relative;
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--wiki);
+  font-weight: 700;
+}
+
+.modal__heading {
+  position: relative;
+  margin: 0 0 0.75rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 5vw, 2.2rem);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.modal__lead {
+  position: relative;
+  margin: 0 0 1.4rem;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.modal__badge {
+  position: relative;
+  display: inline-block;
+  margin: -0.4rem 0 1rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: linear-gradient(120deg, var(--coral), #f59e0b);
+}
+
+.modal__badge[hidden] {
+  display: none !important;
+}
+
+.modal__metrics {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin: 0 0 1.4rem;
+}
+
+.metric {
+  padding: 0.85rem 0.7rem;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.metric dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--faint);
+  margin-bottom: 0.3rem;
+  font-weight: 600;
+}
+
+.metric dd {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--wiki);
+}
+
+.modal__actions {
+  position: relative;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.modal__actions .btn--ghost {
+  margin-top: 0;
+}
+
+/* ---------- Vikipedi esintili ana lobi ---------- */
+
+.lobby {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0 0 3rem;
+  background: rgba(255, 255, 255, 0.72);
+  overflow: visible;
+}
+
+.wiki-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 55;
+  display: grid;
+  grid-template-columns: auto auto minmax(180px, 360px) 1fr;
+  align-items: center;
+  gap: 1rem;
+  min-height: 54px;
+  padding: 0.45rem max(1rem, calc((100vw - 980px) / 2));
+  background: rgba(234, 236, 240, 0.96);
+  border-bottom: 1px solid #c8ccd1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.wiki-topbar__menu,
+.wiki-topbar__user {
+  color: #202122;
+  font-size: 1.15rem;
+}
+
+.wiki-topbar__user {
+  justify-self: end;
+  font-size: 1.35rem;
+}
+
+.wiki-topbar__controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.wiki-topbar__logo {
+  justify-self: end;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 50%;
+  filter: drop-shadow(0 2px 3px rgba(32, 33, 34, 0.16));
+}
+
+.wiki-topbar__brand {
+  display: flex;
+  flex-direction: column;
+  min-width: 112px;
+  color: #202122;
+  text-decoration: none;
+  line-height: 1;
+}
+
+.wiki-topbar__brand-main {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.35rem;
+  letter-spacing: 0.08em;
+  font-variant: small-caps;
+}
+
+.wiki-topbar__brand-sub {
+  margin-top: 0.18rem;
+  font-family: Georgia, "Times New Roman", serif;
+  color: #54595d;
+  font-size: 0.55rem;
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+
+.wiki-topbar__search {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 40px;
+  padding: 0 0.75rem;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #a2a9b1;
+  color: #72777d;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.88rem;
+}
+
+.wiki-page {
+  width: min(980px, calc(100% - 1.5rem));
+  margin: 1.5rem auto 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #202122;
+}
+
+.wiki-welcome {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  min-height: 142px;
+  margin-bottom: 1.35rem;
+  padding: 1.4rem 1.5rem;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(248, 249, 250, 0.98), rgba(248, 249, 250, 0.83)),
+    #f8f9fa;
+  border: 1px solid #c8ccd1;
+}
+
+.wiki-watermark {
+  position: absolute;
+  inset: -2.2rem 0 -2rem;
+  z-index: -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  overflow: hidden;
+  color: rgba(114, 119, 125, 0.105);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(4.2rem, 11vw, 8.5rem);
+  line-height: 1;
+  user-select: none;
+}
+
+.wiki-watermark span:nth-child(odd) {
+  transform: translateY(-0.35rem) rotate(-8deg);
+}
+
+.wiki-watermark span:nth-child(even) {
+  transform: translateY(0.65rem) rotate(7deg);
+}
+
+.wiki-welcome__intro,
+.wiki-welcome__side {
+  position: relative;
+  z-index: 1;
+}
+
+.wiki-welcome__intro h1 {
+  margin: 0 0 0.3rem;
+  font-family: Georgia, "Times New Roman", serif;
+  color: #3366cc;
+  font-size: clamp(1.45rem, 4vw, 2rem);
+  font-weight: 400;
+}
+
+.wiki-welcome__intro p,
+.wiki-welcome__side p {
+  margin: 0;
+  color: #54595d;
+  font-size: 0.88rem;
+}
+
+.wiki-welcome__side {
+  align-self: center;
+}
+
+.wiki-welcome__side > p {
+  color: #3366cc;
+  text-align: left;
+}
+
+.wiki-welcome__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.15rem;
+  margin-top: 0.8rem;
+  color: #202122;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.wiki-welcome__links span {
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.wiki-welcome__links span:hover {
+  color: #3366cc;
+  transform: translateY(-1px);
+}
+
+.wiki-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.wiki-section {
+  margin-bottom: 1rem;
+  background: #fff;
+  border: 1px solid #a2a9b1;
+}
+
+.wiki-section__heading {
+  margin: 0;
+  padding: 0.42rem 0.7rem;
+  color: #202122;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+  border-bottom: 1px solid #a2a9b1;
+}
+
+.wiki-section--blue .wiki-section__heading {
+  background: #cedff2;
+}
+
+.wiki-section--cyan .wiki-section__heading {
+  background: #cef2f2;
+}
+
+.wiki-section--green .wiki-section__heading {
+  background: #d5f0df;
+}
+
+.wiki-section--lavender .wiki-section__heading {
+  background: #e1d8f2;
+}
+
+.wiki-section__body {
+  padding: 0.9rem;
+}
+
+.wiki-section__lead {
+  margin: 0 0 0.75rem;
+  color: #54595d;
+  font-size: 0.82rem;
+}
+
+.wiki-section__body--split {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.9rem;
+}
+
+.player-dock {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  animation: none;
+}
+
+.player-dock__label {
+  margin: 0 0 0.55rem;
+  color: #54595d;
+  font-size: 0.84rem;
+  font-weight: 400;
+}
+
+.player-dock__input {
+  border-radius: 2px;
+  border-color: #a2a9b1;
+  background: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 400;
+}
+
+.player-dock__input:focus {
+  border-color: #3366cc;
+  box-shadow: inset 0 0 0 1px #3366cc;
+}
+
+.btn--dock {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+.trophy {
+  min-height: auto;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #c8ccd1;
+  border-radius: 0;
+  background: #f8f9fa;
+}
+
+.trophy__icon {
+  width: 2rem;
+  height: 2rem;
+  background: #fc3;
+  border-radius: 2px;
+  animation: none;
+}
+
+.trophy__caption {
+  color: #54595d;
+}
+
+.trophy__player {
+  color: #3366cc;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.difficulty {
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.difficulty-card {
+  padding: 0.7rem 0.8rem;
+  border-width: 1px;
+  border-radius: 2px;
+  background: #f8f9fa;
+  box-shadow: none;
+}
+
+.difficulty-card:hover {
+  transform: none;
+  border-color: #3366cc;
+  box-shadow: inset 3px 0 #3366cc;
+}
+
+.difficulty-card.is-selected,
+.difficulty-card--easy.is-selected,
+.difficulty-card--medium.is-selected,
+.difficulty-card--hard.is-selected {
+  transform: none;
+  border-color: #3366cc;
+  background: #eaf3ff;
+  box-shadow: inset 4px 0 #3366cc;
+}
+
+.difficulty-card__name {
+  font-size: 0.96rem;
+}
+
+.difficulty-card__desc {
+  font-size: 0.78rem;
+}
+
+.arena-cats {
+  align-content: flex-start;
+  gap: 0.4rem;
+}
+
+.cat-chip {
+  padding: 0.5rem 0.72rem;
+  border: 1px solid #a2a9b1;
+  border-radius: 2px;
+  background: #f8f9fa;
+  color: #3366cc;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.cat-chip:hover {
+  transform: none;
+  border-color: #3366cc;
+  background: #eef4ff;
+  color: #2a4b8d;
+}
+
+.cat-chip.is-selected {
+  border-color: #3366cc;
+  background: #3366cc;
+  color: #fff;
+  box-shadow: none;
+  animation: none;
+}
+
+.launch {
+  margin: 0.35rem 0 1.2rem;
+  padding: 0;
+  animation: none;
+}
+
+.btn--launch {
+  width: min(100%, 390px);
+  padding: 0.85rem 1.25rem;
+  border: 1px solid #2a4b8d;
+  border-radius: 2px;
+  background: #3366cc;
+  box-shadow: 0 2px 5px rgba(51, 102, 204, 0.24);
+  font-size: 1rem;
+  animation: none;
+}
+
+.btn--launch__glow {
+  display: none;
+}
+
+.btn--launch:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #2a4b8d;
+  box-shadow: 0 4px 8px rgba(51, 102, 204, 0.28);
+}
+
+.scoreboard {
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+}
+
+.scoreboard__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+}
+
+.scoreboard__head h2 {
+  margin: 0;
+  font-size: inherit;
+}
+
+.records-wrap {
+  border-radius: 0;
+}
+
+.records th {
+  background: #eaecf0;
+}
+
+@media (min-width: 760px) {
+  .wiki-welcome {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .wiki-welcome__side {
+    max-width: 390px;
+  }
+
+  .wiki-welcome__side > p {
+    text-align: right;
+  }
+
+  .wiki-welcome__links {
+    justify-content: flex-end;
+  }
+
+  .wiki-section__body--split {
+    grid-template-columns: 1.15fr 0.85fr;
+    align-items: stretch;
+  }
+
+  .wiki-columns {
+    grid-template-columns: 0.92fr 1.08fr;
+  }
+
+  .difficulty {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .wiki-topbar {
+    grid-template-columns: auto 1fr auto;
+    gap: 0.7rem;
+  }
+
+  .wiki-topbar__search {
+    display: none;
+  }
+
+  .wiki-watermark {
+    font-size: 5rem;
+  }
+
+  .wiki-welcome {
+    padding: 1.15rem;
+  }
+
+  .wiki-welcome__links {
+    gap: 0.75rem;
+  }
+}
+
+/* ---------- Vikipedi dili: oyun, geri sayım ve sonuç ---------- */
+
+.game-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92)),
+    repeating-linear-gradient(
+      -12deg,
+      transparent 0 85px,
+      rgba(114, 119, 125, 0.06) 86px 88px
+    );
+}
+
+.game-panel {
+  background: rgba(234, 236, 240, 0.97);
+  border-bottom: 1px solid #a2a9b1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.09);
+  backdrop-filter: blur(10px);
+}
+
+.game-panel__logo {
+  display: block;
+  width: 2.15rem;
+  height: 2.15rem;
+  border: 1px solid #a2a9b1;
+  border-radius: 50%;
+  background: #fff;
+  object-fit: contain;
+  animation: none;
+}
+
+.game-panel__name {
+  font-family: Georgia, "Times New Roman", serif;
+  color: #202122;
+  font-size: 1.35rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  font-variant: small-caps;
+}
+
+.game-panel__tagline {
+  color: #54595d;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.btn--icon,
+.btn--finish {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+.btn--icon {
+  background: #fff;
+  border-color: #a2a9b1;
+}
+
+.btn--finish {
+  border-color: #b32424;
+  background: #fff;
+  color: #b32424;
+}
+
+.btn--finish:hover {
+  transform: none;
+  background: #fee7e6;
+  border-color: #b32424;
+  box-shadow: none;
+}
+
+.stat {
+  padding: 0.48rem 0.65rem;
+  border: 1px solid #c8ccd1;
+  border-radius: 0;
+  background: #fff;
+}
+
+.stat--target {
+  border-color: #a2a9b1;
+  background: #f8f9fa;
+  box-shadow: inset 4px 0 #36c;
+}
+
+.stat__label {
+  color: #72777d;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.stat__value {
+  color: #202122;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.stat--target .stat__value {
+  color: #36c;
+}
+
+.game-panel__trail {
+  color: #54595d;
+  border-color: #c8ccd1;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.trail__current {
+  color: #36c;
+}
+
+.stage {
+  width: min(980px, calc(100% - 1.5rem));
+  margin-top: 1.35rem;
+}
+
+.article {
+  position: relative;
+  border: 1px solid #a2a9b1;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.article__header {
+  position: relative;
+  isolation: isolate;
+  min-height: 104px;
+  display: flex;
+  align-items: flex-end;
+  padding: 1.35rem 1.5rem 0.8rem;
+  overflow: hidden;
+  border-bottom: 1px solid #a2a9b1;
+  background: #f8f9fa;
+}
+
+.article__header::before {
+  content: "V  İ  K  İ  R  O  T  A";
+  position: absolute;
+  z-index: -1;
+  inset: -1.7rem -1rem auto;
+  color: rgba(114, 119, 125, 0.09);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(4rem, 10vw, 7rem);
+  line-height: 1;
+  white-space: nowrap;
+  transform: rotate(-5deg);
+  user-select: none;
+}
+
+.article__title {
+  width: 100%;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #a2a9b1;
+  color: #202122;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.article__body {
+  padding: 1.25rem 1.5rem 2rem;
+  color: #202122;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.article__body h1,
+.article__body h2,
+.article__body h3,
+.article__body h4 {
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid #a2a9b1;
+  color: #202122;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+}
+
+.article__body a.wiki-link {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #36c;
+  text-decoration: none;
+}
+
+.article__body a.wiki-link:hover,
+.article__body a.wiki-link:focus-visible {
+  color: #2a4b8d;
+  background: transparent;
+  text-decoration: underline;
+}
+
+.article__body table {
+  background: #fff;
+}
+
+.article__body th {
+  background: #eaecf0;
+}
+
+.loader {
+  min-height: 50vh;
+  background: #fff;
+  border: 1px solid #a2a9b1;
+}
+
+.loader__ring {
+  width: 44px;
+  height: 44px;
+  border-color: #c8ccd1;
+  border-top-color: #36c;
+  border-right-color: #36c;
+}
+
+.loader__text {
+  color: #54595d;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Geri sayım, Vikipedi duyuru sayfası görünümünde */
+.countdown {
+  background: rgba(234, 236, 240, 0.96);
+  backdrop-filter: blur(7px);
+}
+
+.countdown__glow {
+  inset: 0;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
+  animation: none;
+}
+
+.countdown__glow::before {
+  content: "V  İ  K  İ  R  O  T  A";
+  position: absolute;
+  inset: 4% -8%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(114, 119, 125, 0.09);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(5rem, 15vw, 12rem);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  transform: rotate(-7deg);
+}
+
+.countdown__inner {
+  width: min(720px, 100%);
+  padding: 0;
+  background: #fff;
+  border: 1px solid #a2a9b1;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.14);
+  animation: rise-in 0.4s ease both;
+}
+
+.countdown__eyebrow {
+  margin: 0;
+  padding: 0.45rem 0.75rem;
+  background: #cedff2;
+  border-bottom: 1px solid #a2a9b1;
+  color: #202122;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-align: left;
+}
+
+.countdown__mission {
+  margin: 0;
+  padding: 1.1rem 1rem 0.3rem;
+  color: #202122;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+}
+
+.countdown__route {
+  margin: 0;
+  padding: 1rem;
+}
+
+.countdown__word {
+  border: 1px solid #a2a9b1;
+  border-radius: 0;
+  background: #f8f9fa;
+  box-shadow: none;
+}
+
+.countdown__word--from {
+  border-left: 5px solid #36c;
+  background: #f1f7ff;
+}
+
+.countdown__word--to {
+  border-left: 5px solid #14866d;
+  background: #f0fff8;
+}
+
+.countdown__tag,
+.countdown__word--from .countdown__tag,
+.countdown__word--to .countdown__tag {
+  color: #54595d;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.countdown__title {
+  color: #202122;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+}
+
+.countdown__arrow-line {
+  border-radius: 0;
+  background: #72777d;
+}
+
+.countdown__arrow-head {
+  color: #36c;
+  background: none;
+  -webkit-text-fill-color: #36c;
+}
+
+.countdown__dial {
+  width: 112px;
+  height: 112px;
+  margin-bottom: 0.7rem;
+  border: 2px solid #36c;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: none;
+}
+
+.countdown__number {
+  color: #36c;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+}
+
+.countdown__number.is-go {
+  color: #14866d;
+}
+
+.countdown__hint {
+  margin: 0;
+  padding: 0 1rem 1rem;
+  color: #54595d;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Sonuç, Vikipedi bilgi kutusu görünümünde */
+.modal__backdrop {
+  background: rgba(32, 33, 34, 0.48);
+  backdrop-filter: blur(4px);
+}
+
+.modal__card {
+  width: min(500px, 100%);
+  padding: 0 1.15rem 1.15rem;
+  border: 1px solid #72777d;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal__card::before {
+  content: "VikiRota sonuçları";
+  display: block;
+  margin: 0 -1.15rem 1rem;
+  padding: 0.5rem 0.75rem;
+  background: #d5f0df;
+  border-bottom: 1px solid #a2a9b1;
+  color: #202122;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.modal__burst {
+  display: none;
+}
+
+.modal__eyebrow {
+  color: #14866d;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.modal__heading {
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid #a2a9b1;
+  color: #202122;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+}
+
+.modal__lead {
+  color: #54595d;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.modal__badge {
+  border-radius: 2px;
+  background: #fc3;
+  color: #202122;
+}
+
+.metric {
+  border: 1px solid #c8ccd1;
+  border-radius: 0;
+  background: #f8f9fa;
+}
+
+.metric dt {
+  color: #54595d;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.metric dd {
+  color: #36c;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+}
+
+.modal__actions .btn {
+  border-radius: 2px;
+}
+
+/* ---------- Nasıl oynanır sayfası ---------- */
+
+.how-to-page[hidden] {
+  display: none !important;
+}
+
+.wiki-text-link {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #36c;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wiki-text-link:hover,
+.wiki-text-link:focus-visible {
+  color: #2a4b8d;
+  text-decoration: underline;
+}
+
+.how-to-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: rgba(255, 255, 255, 0.9);
+  color: #202122;
+}
+
+.how-to-back {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid #a2a9b1;
+  border-radius: 2px;
+  background: #fff;
+  color: #202122;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.how-to-back:hover {
+  border-color: #36c;
+  color: #36c;
+}
+
+.how-to-content {
+  width: min(980px, calc(100% - 1.5rem));
+  margin: 1.5rem auto 3rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.how-to-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-bottom: 1rem;
+  padding: 1.4rem 1.5rem;
+  overflow: hidden;
+  background: #f8f9fa;
+  border: 1px solid #c8ccd1;
+}
+
+.how-to-hero .wiki-watermark {
+  font-size: clamp(5rem, 14vw, 9rem);
+}
+
+.how-to-hero__eyebrow {
+  margin: 0 0 0.3rem;
+  color: #54595d;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.how-to-hero h1 {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 0.45rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #a2a9b1;
+  color: #202122;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-weight: 400;
+}
+
+.how-to-hero > p:last-child {
+  position: relative;
+  z-index: 1;
+  max-width: 650px;
+  margin: 0;
+  color: #54595d;
+  line-height: 1.55;
+}
+
+.how-to-notice {
+  margin-bottom: 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid #a2a9b1;
+  border-left: 5px solid #36c;
+  background: #f1f7ff;
+  color: #202122;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.how-to-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.how-to-article {
+  min-width: 0;
+}
+
+.help-section {
+  margin-bottom: 1rem;
+  border: 1px solid #a2a9b1;
+  background: #fff;
+}
+
+.help-section > h2,
+.help-box > h2 {
+  margin: 0;
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid #a2a9b1;
+  color: #202122;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.help-section--blue > h2 {
+  background: #cedff2;
+}
+
+.help-section--cyan > h2 {
+  background: #cef2f2;
+}
+
+.help-section--green > h2 {
+  background: #d5f0df;
+}
+
+.help-section--lavender > h2 {
+  background: #e1d8f2;
+}
+
+.help-section__body {
+  padding: 1rem;
+  color: #202122;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.help-section__body p {
+  margin-top: 0;
+}
+
+.help-section__body p:last-child {
+  margin-bottom: 0;
+}
+
+.help-section__body ul {
+  margin: 0.7rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.help-section__body li {
+  margin-bottom: 0.4rem;
+}
+
+.help-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.help-steps li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #eaecf0;
+}
+
+.help-steps li:first-child {
+  padding-top: 0;
+}
+
+.help-steps li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.help-steps__number {
+  display: grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  background: #36c;
+  color: #fff;
+  font-weight: 700;
+}
+
+.help-steps h3 {
+  margin: 0 0 0.15rem;
+  color: #36c;
+  font-size: 0.95rem;
+}
+
+.help-steps p {
+  margin: 0;
+  color: #54595d;
+}
+
+.help-link-example {
+  color: #36c;
+  text-decoration: underline;
+}
+
+.difficulty-guide {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.difficulty-guide > div {
+  padding: 0.75rem;
+  border: 1px solid #c8ccd1;
+  background: #f8f9fa;
+}
+
+.difficulty-guide strong {
+  color: #36c;
+}
+
+.difficulty-guide p {
+  margin: 0.25rem 0 0;
+  color: #54595d;
+}
+
+.how-to-sidebar {
+  min-width: 0;
+}
+
+.help-box {
+  margin-bottom: 1rem;
+  border: 1px solid #a2a9b1;
+  background: #f8f9fa;
+}
+
+.help-box > h2 {
+  background: #eaecf0;
+}
+
+.help-box ul,
+.help-box p {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  color: #54595d;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.help-box ul {
+  padding-left: 2rem;
+}
+
+.help-box li {
+  margin-bottom: 0.4rem;
+}
+
+.help-box--warning {
+  border-left: 5px solid #fc3;
+}
+
+.help-box--warning > h2 {
+  background: #fff4c2;
+}
+
+.how-to-cta {
+  width: 100%;
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+@media (min-width: 760px) {
+  .how-to-layout {
+    grid-template-columns: minmax(0, 1fr) 260px;
+    align-items: start;
+  }
+
+  .how-to-sidebar {
+    position: sticky;
+    top: 70px;
+  }
+
+  .difficulty-guide {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ---------- İstekler ve düzenlemeler sayfası ---------- */
+
+.feedback-page[hidden],
+.privacy-page[hidden] {
+  display: none !important;
+}
+
+.feedback-page,
+.privacy-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: rgba(255, 255, 255, 0.9);
+  color: #202122;
+}
+
+.privacy-hero .wiki-watermark {
+  font-size: clamp(4.5rem, 12vw, 8rem);
+  letter-spacing: 0.08em;
+}
+
+.feedback-content {
+  width: min(980px, calc(100% - 1.5rem));
+  margin: 1.5rem auto 3rem;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.feedback-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-bottom: 1rem;
+  padding: 1.4rem 1.5rem;
+  overflow: hidden;
+  background: #f8f9fa;
+  border: 1px solid #c8ccd1;
+}
+
+.feedback-hero .wiki-watermark {
+  font-size: clamp(5rem, 14vw, 9rem);
+}
+
+.feedback-hero h1 {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 0.45rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #a2a9b1;
+  color: #202122;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-weight: 400;
+}
+
+.feedback-hero > p:last-child {
+  position: relative;
+  z-index: 1;
+  max-width: 680px;
+  margin: 0;
+  color: #54595d;
+  line-height: 1.55;
+}
+
+.feedback-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.feedback-form-panel {
+  border: 1px solid #a2a9b1;
+  background: #fff;
+}
+
+.feedback-form-panel > h2 {
+  margin: 0;
+  padding: 0.45rem 0.7rem;
+  border-bottom: 1px solid #a2a9b1;
+  background: #cedff2;
+  color: #202122;
+  font-size: 1rem;
+}
+
+.feedback-form {
+  padding: 1rem;
+}
+
+.feedback-form__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.8rem;
+}
+
+.feedback-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.8rem;
+}
+
+.feedback-field > span {
+  color: #202122;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.feedback-field input,
+.feedback-field select,
+.feedback-field textarea {
+  width: 100%;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid #a2a9b1;
+  border-radius: 0;
+  outline: none;
+  background: #fff;
+  color: #202122;
+  font: inherit;
+  font-size: 0.9rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.feedback-field textarea {
+  min-height: 150px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.feedback-field input:focus,
+.feedback-field select:focus,
+.feedback-field textarea:focus {
+  border-color: #36c;
+  box-shadow: inset 0 0 0 1px #36c;
+}
+
+.feedback-form__note {
+  margin: 0.2rem 0 1rem;
+  padding: 0.65rem 0.75rem;
+  border-left: 4px solid #36c;
+  background: #f1f7ff;
+  color: #54595d;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.feedback-form__actions {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.feedback-form__actions .btn {
+  width: 100%;
+  margin: 0;
+  border-radius: 2px;
+}
+
+.feedback-sidebar {
+  min-width: 0;
+}
+
+.feedback-email-link {
+  color: #36c;
+  overflow-wrap: anywhere;
+}
+
+.feedback-email-link:hover {
+  color: #2a4b8d;
+  text-decoration: underline;
+}
+
+@media (min-width: 760px) {
+  .feedback-layout {
+    grid-template-columns: minmax(0, 1fr) 280px;
+    align-items: start;
+  }
+
+  .feedback-sidebar {
+    position: sticky;
+    top: 70px;
+  }
+
+  .feedback-form__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ---------- Rota geçmişi ---------- */
+
+.route-history {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid #c8ccd1;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.route-history__label {
+  color: #54595d;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.route-history__list,
+.modal-route ol {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.route-history__list li,
+.modal-route li {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  color: #36c;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.route-history__list li:not(:last-child)::after,
+.modal-route li:not(:last-child)::after {
+  content: "›";
+  margin: 0 0.45rem;
+  color: #72777d;
+  font-size: 1rem;
+}
+
+.route-history__list li.is-current,
+.modal-route li.is-current {
+  color: #202122;
+  font-weight: 700;
+}
+
+.modal-route {
+  position: relative;
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border: 1px solid #c8ccd1;
+  background: #f8f9fa;
+  text-align: left;
+}
+
+.modal-route h3 {
+  margin: 0 0 0.55rem;
+  color: #202122;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.8rem;
+}
+
+.modal-route ol {
+  padding-bottom: 0.2rem;
+}
+
+@media (min-width: 720px) {
+  .route-history {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---------- Günlük yarış ---------- */
+
+.wiki-section--daily .wiki-section__heading {
+  background: #fff4c2;
+}
+
+.daily-challenge {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 1rem;
+}
+
+.daily-challenge__date {
+  margin: 0 0 0.2rem;
+  color: #72777d;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.daily-challenge h3 {
+  margin: 0 0 0.3rem;
+  color: #202122;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.2rem;
+  font-weight: 400;
+}
+
+.daily-challenge__meta,
+.daily-challenge__status {
+  margin: 0.15rem 0 0;
+  color: #54595d;
+  font-size: 0.82rem;
+}
+
+.daily-challenge__status.is-complete {
+  color: #14866d;
+  font-weight: 700;
+}
+
+.btn--daily {
+  border: 1px solid #8a6d00;
+  border-radius: 2px;
+  background: #fc3;
+  color: #202122;
+  box-shadow: none;
+}
+
+.btn--daily:hover:not(:disabled) {
+  background: #f2c200;
+}
+
+.btn--daily:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.game-mode-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid #8a6d00;
+  background: #fff4c2;
+  color: #705c00;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.game-mode-badge[hidden] {
+  display: none !important;
+}
+
+.modal__badge--daily {
+  background: #d5f0df;
+  color: #105c48;
+}
+
+/* ---------- Haftalık lig ---------- */
+
+.wiki-section--weekly .wiki-section__heading {
+  background: #dce8f5;
+}
+
+.btn--weekly {
+  border: 1px solid #2a4b7c;
+  border-radius: 2px;
+  background: #3366cc;
+  color: #fff;
+  box-shadow: none;
+}
+
+.btn--weekly:hover:not(:disabled) {
+  background: #2a4b7c;
+}
+
+.btn--weekly:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.game-mode-badge.is-weekly {
+  border-color: #2a4b7c;
+  background: #dce8f5;
+  color: #2a4b7c;
+}
+
+.modal__badge--weekly {
+  background: #dce8f5;
+  color: #2a4b7c;
+}
+
+/* ---------- Arkadaş düellosu ---------- */
+
+.wiki-section--duel .wiki-section__heading {
+  background: linear-gradient(90deg, #f4e4d4, #fff8f0);
+  border-left: 4px solid #b85c38;
+  color: #6b3420;
+}
+
+.duel-challenge {
+  align-items: flex-start;
+}
+
+.duel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  min-width: min(100%, 14rem);
+}
+
+.duel-settings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  margin-top: 0.85rem;
+  padding: 0.85rem 1rem;
+  border-top: 1px solid #e2cfc0;
+  background: #fffaf6;
+}
+
+.duel-settings__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: #54595d;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.duel-settings__field select {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid #c8a992;
+  border-radius: 2px;
+  background: #fff;
+  color: #202122;
+  font: inherit;
+  font-weight: 500;
+}
+
+.duel-settings__field select:disabled {
+  background: #f3ebe4;
+  color: #705848;
+  cursor: not-allowed;
+}
+
+.duel-settings__hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #705848;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.btn--duel {
+  border: 1px solid #8a4024;
+  border-radius: 2px;
+  background: #f0a070;
+  color: #2a140c;
+  box-shadow: none;
+  font-weight: 700;
+}
+
+.btn--duel:hover:not(:disabled) {
+  background: #e8925c;
+}
+
+.btn--duel:disabled,
+.btn--duel-ready:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.btn--duel-ready {
+  border: 1px solid #2f6b3a;
+  border-radius: 2px;
+  background: #b8e0c0;
+  color: #14361c;
+  font-weight: 700;
+}
+
+.btn--duel-ready.is-armed {
+  background: #2f6b3a;
+  color: #fff;
+}
+
+.duel-players {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.duel-player {
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #d8c4b4;
+  background: #fffaf6;
+}
+
+.duel-player.is-ready {
+  border-color: #2f6b3a;
+  background: #f0faf2;
+}
+
+.duel-player.is-you {
+  box-shadow: inset 3px 0 0 #b85c38;
+}
+
+.duel-player__role {
+  display: block;
+  color: #705848;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.duel-player__name {
+  display: block;
+  margin: 0.2rem 0;
+  color: #202122;
+  font-size: 1rem;
+}
+
+.duel-player__state {
+  color: #54595d;
+  font-size: 0.85rem;
+}
+
+.modal__badge--duel {
+  background: #f8e4d8;
+  color: #6b3420;
+}
+
+.duel-result {
+  margin: 0.9rem 0 0.2rem;
+  padding: 0.85rem;
+  border: 1px solid #e2cfc0;
+  background: #fffaf6;
+  text-align: left;
+}
+
+.duel-result[hidden] {
+  display: none !important;
+}
+
+.duel-result h3 {
+  margin: 0 0 0.45rem;
+  font-size: 1rem;
+}
+
+.duel-result__status {
+  margin: 0 0 0.65rem;
+  color: #54595d;
+  font-size: 0.9rem;
+}
+
+.duel-result__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.duel-result__card {
+  padding: 0.65rem 0.7rem;
+  border: 1px solid #e8d8ca;
+  background: #fff;
+}
+
+.duel-result__card.is-winner {
+  border-color: #2f6b3a;
+  background: #f1faf3;
+}
+
+.duel-result__card.is-pending {
+  opacity: 0.72;
+}
+
+.duel-result__card strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.duel-result__card span {
+  display: block;
+  color: #54595d;
+  font-size: 0.85rem;
+}
+
+.game-mode-badge.is-duel {
+  border-color: #8a4024;
+  background: #f8e4d8;
+  color: #6b3420;
+}
+
+@media (max-width: 640px) {
+  .duel-players,
+  .duel-result__grid,
+  .duel-settings {
+    grid-template-columns: 1fr;
+  }
+
+  .duel-actions {
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .duel-actions .btn {
+    flex: 1 1 auto;
+  }
+}
+
+.weekly-standings {
+  margin-top: 0.75rem;
+  padding: 0.85rem 1rem 1rem;
+  border-top: 1px solid #a2a9b1;
+}
+
+.weekly-standings__title {
+  margin: 0 0 0.55rem;
+  color: #202122;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.weekly-standings__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.weekly-standings__list li {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+  gap: 0.45rem;
+  align-items: baseline;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid #c8ccd1;
+  background: #fff;
+  font-size: 0.82rem;
+}
+
+.weekly-standings__list li strong {
+  font-weight: 700;
+}
+
+.weekly-standings__empty {
+  display: block !important;
+  color: #54595d;
+  border-style: dashed !important;
+}
+
+@media (min-width: 680px) {
+  .daily-challenge {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+/* ---------- Çevrim içi liderlik ---------- */
+
+.leaderboard-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 0.65rem;
+}
+
+.leaderboard-tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  border: 1px solid #a2a9b1;
+}
+
+.leaderboard-tab {
+  padding: 0.45rem 0.75rem;
+  border: 0;
+  border-right: 1px solid #a2a9b1;
+  background: #f8f9fa;
+  color: #36c;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.leaderboard-tab:last-child {
+  border-right: 0;
+}
+
+.leaderboard-tab.is-active {
+  background: #36c;
+  color: #fff;
+}
+
+.leaderboard-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.leaderboard-filters select {
+  min-height: 32px;
+  padding: 0.3rem 1.8rem 0.3rem 0.55rem;
+  border: 1px solid #a2a9b1;
+  border-radius: 0;
+  background: #fff;
+  color: #202122;
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.leaderboard-status {
+  margin: 0 0 0.65rem;
+  padding: 0.5rem 0.65rem;
+  border-left: 4px solid #36c;
+  background: #f1f7ff;
+  color: #54595d;
+  font-size: 0.78rem;
+}
+
+.leaderboard-status[data-type="success"] {
+  border-left-color: #14866d;
+  background: #f0fff8;
+}
+
+.leaderboard-status[data-type="warning"] {
+  border-left-color: #fc3;
+  background: #fffbea;
+}
+
+.leaderboard-status[data-type="error"] {
+  border-left-color: #b32424;
+  background: #fee7e6;
+}
+
+@media (min-width: 680px) {
+  .leaderboard-toolbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+/* ---------- İpucu sistemi ---------- */
+
+.game-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.game-panel__actions .btn {
+  white-space: nowrap;
+}
+
+.shared-challenge[hidden] {
+  display: none !important;
+}
+
+.sound-toggle {
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid #a2a9b1;
+  background: #fff;
+  color: #36c;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sound-toggle[aria-pressed="false"] {
+  color: #72777d;
+  background: #f8f9fa;
+}
+
+.sound-toggle[hidden] {
+  display: none !important;
+}
+
+.shared-challenge .wiki-section__heading {
+  background: #eaf3ff;
+}
+
+.btn--share {
+  border: 1px solid #36c;
+  border-radius: 2px;
+  background: #fff;
+  color: #36c;
+  box-shadow: none;
+}
+
+.btn--share:hover {
+  background: #eaf3ff;
+}
+
+.btn--emoji {
+  min-width: 2.1rem;
+  padding-inline: 0.55rem;
+  font-size: 1rem;
+}
+
+.btn--hint {
+  border: 1px solid #8a6d00;
+  border-radius: 2px;
+  background: #fff4c2;
+  color: #705c00;
+  box-shadow: none;
+}
+
+.btn--hint:hover:not(:disabled) {
+  background: #fc3;
+}
+
+.hint-message {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0.45rem 0.65rem;
+  border-left: 4px solid #fc3;
+  background: #fffbea;
+  color: #54595d;
+  font-size: 0.78rem;
+}
+
+.hint-message[hidden] {
+  display: none !important;
+}
+
+.article__body a.wiki-link.is-hint {
+  outline: 3px solid #fc3;
+  outline-offset: 3px;
+  background: #fff4c2;
+  color: #202122;
+  animation: hint-pulse 1.1s ease-in-out infinite alternate;
+}
+
+@keyframes hint-pulse {
+  to {
+    outline-color: #36c;
+    background: #eaf3ff;
+  }
+}
+
+/* ---------- Profil ve başarımlar ---------- */
+
+.wiki-section--profile .wiki-section__heading {
+  background: #d5f0df;
+}
+
+.profile-overview {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.profile-stats div {
+  padding: 0.65rem;
+  border: 1px solid #c8ccd1;
+  background: #f8f9fa;
+}
+
+.profile-stats dt {
+  color: #72777d;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.profile-stats dd {
+  margin: 0.2rem 0 0;
+  color: #202122;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+}
+
+.profile-achievements__title {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+}
+
+.profile-achievements {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-achievements li {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  min-width: 0;
+  padding: 0.5rem;
+  border: 1px solid #c8ccd1;
+  background: #fff;
+}
+
+.achievement__badge {
+  display: block;
+  flex: 0 0 84px;
+  width: 84px;
+  height: 52px;
+  border: 1px solid #72777d;
+  border-radius: 2px;
+  background: #202122;
+  object-fit: cover;
+  object-position: center;
+}
+
+.profile-achievements strong,
+.profile-achievements small {
+  display: block;
+}
+
+.profile-achievements strong {
+  font-size: 0.75rem;
+}
+
+.profile-achievements small {
+  color: #72777d;
+  font-size: 0.65rem;
+}
+
+.profile-achievements .is-locked {
+  filter: grayscale(1);
+  opacity: 0.48;
+}
+
+.profile-achievements .is-unlocked {
+  border-color: #14866d;
+  background: #f0fff8;
+}
+
+.profile-achievements .achievement--starter.is-unlocked {
+  border-color: #8b5a2b;
+  background: linear-gradient(135deg, #f5eadc, #d5b487);
+}
+
+.profile-achievements .achievement--growth.is-unlocked {
+  border-color: #8a6d00;
+  background: linear-gradient(135deg, #f8f9fa, #fff4c2);
+}
+
+.profile-achievements .achievement--master.is-unlocked {
+  border-color: #36c;
+  background: linear-gradient(135deg, #eaf3ff, #efe6ff);
+  box-shadow: inset 0 0 12px rgba(51, 102, 204, 0.12);
+}
+
+.profile-achievements .achievement--legendary.is-unlocked {
+  border-color: #6b4ba1;
+  background: linear-gradient(135deg, #e8ddff, #dff7ff, #fff4c2);
+  box-shadow: 0 0 10px rgba(107, 75, 161, 0.22);
+}
+
+.new-achievements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  padding: 0.65rem;
+  border: 1px solid #8a6d00;
+  background: #fff4c2;
+  font-size: 0.75rem;
+}
+
+.new-achievements[hidden] {
+  display: none !important;
+}
+
+.new-achievements strong {
+  width: 100%;
+}
+
+.new-achievement {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.45rem 0.25rem 0.25rem;
+  border: 1px solid #c8ccd1;
+  background: #fff;
+}
+
+.new-achievement__badge {
+  display: block;
+  width: 72px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+  background: #202122;
+  border-radius: 2px;
+}
+
+@media (min-width: 760px) {
+  .profile-overview {
+    grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  .profile-achievements {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .achievement__badge {
+    flex-basis: 96px;
+    width: 96px;
+    height: 60px;
+  }
+}
+
+/* ---------- Responsive ---------- */
+
+@media (min-width: 720px) {
+  .game-panel {
+    grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr);
+    align-items: center;
+  }
+
+  .game-panel__brand {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .game-panel__actions {
+    grid-column: 2;
+    grid-row: 1;
+    justify-content: flex-end;
+  }
+
+  .game-panel__stats {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: stretch;
+    max-width: none;
+  }
+
+  .game-panel__trail {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    border-top: 1px solid #c8ccd1;
+    padding-top: 0.35rem;
+  }
+
+  .stage {
+    margin-top: 2rem;
+  }
+
+  .article__header,
+  .article__body {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (max-width: 719px) {
+  .game-panel {
+    gap: 0.65rem;
+    padding: 0.7rem 0.75rem 0.8rem;
+  }
+
+  .game-panel__brand {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.45rem 0.5rem;
+  }
+
+  .game-panel__sound {
+    margin-left: 0;
+  }
+
+  .game-panel__name {
+    font-size: 1.15rem;
+  }
+
+  .game-panel__tagline {
+    font-size: 0.68rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .game-panel__actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
+    justify-content: stretch;
+  }
+
+  .game-panel__actions .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.48rem 0.35rem;
+    font-size: 0.78rem;
+    text-align: center;
+  }
+
+  .btn-label-full {
+    display: none;
+  }
+
+  .btn-label-short {
+    display: inline;
+  }
+
+  .game-panel__stats {
+    gap: 0.4rem;
+  }
+
+  .stat {
+    padding: 0.4rem 0.45rem;
+  }
+
+  .stat__label {
+    font-size: 0.62rem;
+  }
+
+  .stat__value {
+    font-size: 0.88rem;
+  }
+
+  .game-panel__trail {
+    font-size: 0.78rem;
+    gap: 0.25rem 0.4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .game-panel__tagline {
+    font-size: 0.64rem;
+  }
+
+  .stat__value {
+    font-size: 0.84rem;
+  }
+
+  .stat--target .stat__value {
+    font-size: 0.78rem;
+  }
+
+  .game-panel__actions .btn {
+    font-size: 0.74rem;
+    padding: 0.45rem 0.25rem;
+  }
+
+  .article__body {
+    font-size: 1rem;
+  }
+
+  .lobby {
+    padding-top: 1.25rem;
+  }
+
+  .countdown__dial {
+    width: 120px;
+    height: 120px;
+  }
+
+  .countdown__number {
+    font-size: 3.4rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- Karanlık tema (yalnızca data-theme="dark") ---------- */
+/* Tüm açık/beyaz yüzeyleri siyaha, metinleri beyaza çevirir. */
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #000000;
+  --paper-deep: #0a0a0a;
+  --surface: #111111;
+  --ink: #ffffff;
+  --ink-soft: #ffffff;
+  --muted: #e8e8e8;
+  --faint: #cfcfcf;
+  --line: #333333;
+  --line-strong: #444444;
+  --wiki: #9ec1ff;
+  --wiki-deep: #8eb6ff;
+  --wiki-soft: rgba(158, 193, 255, 0.15);
+  --link: #9ec1ff;
+  --link-hover: #c5daff;
+  --coral: #ff9a90;
+  --coral-soft: rgba(255, 154, 144, 0.15);
+  --mint: #6ee7c5;
+  --mint-soft: rgba(110, 231, 197, 0.15);
+  --gold: #fbbf24;
+  --gold-soft: rgba(251, 191, 36, 0.15);
+  --danger: #ff8a8a;
+  --shadow: none;
+  --shadow-sm: none;
+}
+
+html[data-theme="dark"],
+html[data-theme="dark"] body {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+html[data-theme="dark"] .ambient,
+html[data-theme="dark"] .ambient__orb,
+html[data-theme="dark"] .ambient__mesh {
+  background: #000000 !important;
+  opacity: 0 !important;
+}
+
+/* Genel kural: her kutu/panel/buton koyu olsun */
+html[data-theme="dark"] *:not(img):not(svg):not(path):not(circle):not(rect):not(line):not(polyline):not(polygon) {
+  background-color: #111111 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border-color: #333333 !important;
+  box-shadow: none !important;
+  outline-color: #555555 !important;
+  caret-color: #ffffff !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="dark"] html,
+html[data-theme="dark"] body,
+html[data-theme="dark"] .lobby,
+html[data-theme="dark"] .game-shell,
+html[data-theme="dark"] .stage,
+html[data-theme="dark"] .ambient {
+  background-color: #000000 !important;
+}
+
+/* Saydam kalması gereken katmanlar */
+html[data-theme="dark"] .wiki-welcome__intro,
+html[data-theme="dark"] .wiki-welcome__side,
+html[data-theme="dark"] .wiki-welcome__links,
+html[data-theme="dark"] .player-dock__copy,
+html[data-theme="dark"] .player-dock__row,
+html[data-theme="dark"] .duel-actions,
+html[data-theme="dark"] .launch,
+html[data-theme="dark"] .wiki-columns,
+html[data-theme="dark"] .wiki-page,
+html[data-theme="dark"] .modal__burst,
+html[data-theme="dark"] .countdown__glow,
+html[data-theme="dark"] .btn--launch__glow {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Linkler okunaklı mavi kalsın */
+html[data-theme="dark"] a,
+html[data-theme="dark"] .wiki-link,
+html[data-theme="dark"] .article__body a,
+html[data-theme="dark"] .wiki-text-link {
+  color: #9ec1ff !important;
+  background-color: transparent !important;
+}
+
+/* Form alanları biraz daha koyu */
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border-color: #444444 !important;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #bbbbbb !important;
+}
+
+/* Seçili durumlar hafif vurgulu koyu */
+html[data-theme="dark"] .is-selected,
+html[data-theme="dark"] .is-active,
+html[data-theme="dark"] .is-ready,
+html[data-theme="dark"] .is-you,
+html[data-theme="dark"] [aria-checked="true"],
+html[data-theme="dark"] [aria-pressed="true"] {
+  background-color: #1a1a1a !important;
+  border-color: #666666 !important;
+  color: #ffffff !important;
+}
+
+/* Hoş geldin bandı gri; VİKİROTA filigranı gri */
+html[data-theme="dark"] .wiki-welcome {
+  background-color: #2a2a2a !important;
+  border-color: #3a3a3a !important;
+}
+
+html[data-theme="dark"] .wiki-watermark,
+html[data-theme="dark"] .wiki-watermark span {
+  background-color: transparent !important;
+  color: rgba(170, 170, 180, 0.4) !important;
+}
+
+/* Modal perde */
+html[data-theme="dark"] .modal__backdrop,
+html[data-theme="dark"] .loader {
+  background-color: rgba(0, 0, 0, 0.85) !important;
+}
+
+/* Logo görselleri bozulmasın */
+html[data-theme="dark"] img {
+  background-color: transparent !important;
+}
+
+/* Disabled buton metni soluk beyaz */
+html[data-theme="dark"] :disabled,
+html[data-theme="dark"] [disabled] {
+  color: #999999 !important;
+  opacity: 0.6;
+}
