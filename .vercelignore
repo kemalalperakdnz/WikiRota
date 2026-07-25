@@ -1,0 +1,9 @@
+.qa-tmp
+.git
+.vercel
+node_modules
+supabase/.temp
+supabase/.branches
+*.log
+.env
+.env.*
